@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="320" viewBox="0 0 1000 320">
+<style>
+svg {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #1b2330;
+  --dim: #4f5d70;
+  --line: #c3ccd8;
+  --teal: #008a7c;
+  --amber: #b86e0a;
+  --sky: #2f78b8;
+  --coral: #c23a52;
+  --display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color: var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  svg {
+    --bg: #121821; --surface: #1b2330; --ink: #e8f6ff; --dim: #9fb3c8; --line: #34445b;
+    --teal: #35a89f; --amber: #c4841f; --sky: #4f98d4; --coral: #e0607a;
+  }
+}
+text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
+.t-dim { fill: var(--dim); }
+.t-s { font-size: 11px; }
+.t-l { font-size: 13px; }
+.t-b { font-weight: 600; }
+.t-h { font-family: var(--display); font-size: 14px; font-weight: 600; }
+.t-teal { fill: var(--teal); } .t-amber { fill: var(--amber); } .t-coral { fill: var(--coral); } .t-sky { fill: var(--sky); }
+.k-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.k-bg { fill: var(--bg); stroke: var(--line); stroke-width: 1; }
+.k-plain { fill: var(--bg); stroke: none; }
+.k-line { stroke: var(--dim); stroke-width: 1.5; fill: none; }
+.k-thin { stroke: var(--line); stroke-width: 1; fill: none; }
+.k-dash { stroke: var(--dim); stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
+.k-arrow { fill: var(--dim); }
+.k-arrow-teal { fill: var(--teal); } .k-arrow-sky { fill: var(--sky); } .k-arrow-amber { fill: var(--amber); }
+.soft-teal { fill: color-mix(in srgb, var(--teal) 18%, var(--surface)); stroke: var(--teal); stroke-width: 1.2; }
+.soft-amber { fill: color-mix(in srgb, var(--amber) 18%, var(--surface)); stroke: var(--amber); stroke-width: 1.2; }
+.soft-sky { fill: color-mix(in srgb, var(--sky) 18%, var(--surface)); stroke: var(--sky); stroke-width: 1.2; }
+.soft-coral { fill: color-mix(in srgb, var(--coral) 16%, var(--surface)); stroke: var(--coral); stroke-width: 1.2; }
+.soft-dim { fill: color-mix(in srgb, var(--dim) 14%, var(--surface)); stroke: var(--dim); stroke-width: 1; }
+</style>
+<rect x="0" y="0" width="1000" height="320" fill="var(--surface)"/>
+<defs>
+  <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" class="k-arrow"/>
+  </marker>
+  <marker id="ar-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" class="k-arrow-teal"/>
+  </marker>
+  <marker id="ar-sky" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" class="k-arrow-sky"/>
+  </marker>
+</defs>
+
+<text x="20" y="32" class="t-h t-teal">3. CLI Workflows: Live Dev, Test &amp; Build</text>
+<text x="20" y="52" class="t-dim t-s">State-preserving hot reload loop, headless Node tests, and single-command release.</text>
+
+<!-- Dev Server Box -->
+<rect x="30" y="75" width="440" height="225" rx="8" class="soft-teal"/>
+<text x="50" y="105" class="t-h">tessera dev (Local Development)</text>
+
+<rect x="50" y="125" width="160" height="70" rx="4" class="k-box"/>
+<text x="130" y="152" class="t-b" text-anchor="middle">File Watcher</text>
+<text x="130" y="170" class="t-dim t-s" text-anchor="middle">src/ models/ assets/</text>
+
+<rect x="290" y="125" width="160" height="70" rx="4" class="k-box"/>
+<text x="370" y="152" class="t-b" text-anchor="middle">Browser Console</text>
+<text x="370" y="170" class="t-dim t-s" text-anchor="middle">http://localhost:3000</text>
+
+<path d="M 210 145 L 288 145" class="k-line" marker-end="url(#ar-teal)"/>
+<text x="250" y="137" class="t-dim t-s" text-anchor="middle">WS update</text>
+
+<path d="M 290 180 L 212 180" class="k-dash" marker-end="url(#ar)"/>
+<text x="250" y="196" class="t-dim t-s" text-anchor="middle">error feedback</text>
+
+<rect x="50" y="215" width="400" height="65" rx="4" class="k-surface k-box"/>
+<text x="65" y="238" class="t-b">State-Preserving Hot Reload:</text>
+<text x="65" y="254" class="t-dim t-s">• Preserves Lua globals (positions, score, camera) across script edits</text>
+<text x="65" y="268" class="t-dim t-s">• Hot-swaps modified functions; Press [R] anytime for clean _init() restart</text>
+
+<!-- Test & Build Boxes -->
+<rect x="510" y="75" width="460" height="105" rx="8" class="soft-sky"/>
+<text x="530" y="105" class="t-h">tessera test (Headless Test Harness)</text>
+<text x="530" y="130" class="t-dim t-s">• Runs core in Node.js via wasmoon without browser / GPU</text>
+<text x="530" y="148" class="t-dim t-s">• Deterministic step(N) tick advancement (30 Hz loop)</text>
+<text x="530" y="166" class="t-dim t-s">• Simulates button presses and asserts Lua table &amp; voxel states</text>
+
+<rect x="510" y="195" width="460" height="105" rx="8" class="soft-amber"/>
+<text x="530" y="225" class="t-h">tessera build (Packaging &amp; Standalone)</text>
+<text x="530" y="250" class="t-dim t-s">• Validates Lua syntax, model room bounds &amp; palette limits</text>
+<text x="530" y="268" class="t-dim t-s">• Generates .tess, .tess.png picture cart, and standalone .html</text>
+<text x="530" y="286" class="t-dim t-s">• Inlines engine + wasm into offline playable file</text>
+
+</svg>
