@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="520" viewBox="0 0 1000 520">
+<style>
+svg {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #1b2330;
+  --dim: #4f5d70;
+  --line: #c3ccd8;
+  --teal: #008a7c;
+  --amber: #b86e0a;
+  --sky: #2f78b8;
+  --coral: #c23a52;
+  --display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color: var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  svg {
+    --bg: #121821; --surface: #1b2330; --ink: #e8f6ff; --dim: #9fb3c8; --line: #34445b;
+    --teal: #35a89f; --amber: #c4841f; --sky: #4f98d4; --coral: #e0607a;
+  }
+}
+text { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
+.t-dim { fill: var(--dim); }
+.t-s { font-size: 10px; }
+.t-l { font-size: 12px; }
+.t-b { font-weight: 600; }
+.t-h { font-family: var(--display); font-size: 14px; font-weight: 600; }
+.t-fn { font-family: var(--mono); font-weight: 600; fill: var(--sky); font-size: 11px; }
+.t-teal { fill: var(--teal); } .t-amber { fill: var(--amber); } .t-coral { fill: var(--coral); } .t-sky { fill: var(--sky); }
+.k-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.k-bg { fill: var(--bg); stroke: var(--line); stroke-width: 1; }
+.k-line { stroke: var(--line); stroke-width: 1; fill: none; }
+.soft-teal { fill: color-mix(in srgb, var(--teal) 15%, var(--surface)); stroke: var(--teal); stroke-width: 1.2; }
+.soft-amber { fill: color-mix(in srgb, var(--amber) 15%, var(--surface)); stroke: var(--amber); stroke-width: 1.2; }
+.soft-sky { fill: color-mix(in srgb, var(--sky) 15%, var(--surface)); stroke: var(--sky); stroke-width: 1.2; }
+.soft-coral { fill: color-mix(in srgb, var(--coral) 15%, var(--surface)); stroke: var(--coral); stroke-width: 1.2; }
+.sec-hdr { fill: color-mix(in srgb, var(--line) 30%, var(--surface)); stroke: var(--line); stroke-width: 1; }
+</style>
+<rect x="0" y="0" width="1000" height="520" fill="var(--surface)"/>
+
+<text x="20" y="30" class="t-h t-teal">Tessera High-Res Lua API Reference</text>
+<text x="20" y="48" class="t-dim t-s">Volume 256×256×128 voxels · Display 768×432 letterboxed · Logic 30 Hz fixed tick · Palette 1–255 (0 = empty)</text>
+
+<!-- Column 1: Map & Draw Layers -->
+<rect x="20" y="65" width="305" height="435" rx="6" class="k-bg"/>
+
+<rect x="25" y="70" width="295" height="24" rx="4" class="sec-hdr"/>
+<text x="35" y="86" class="t-b t-teal">MAP LAYER (Persists)</text>
+
+<text x="35" y="110" class="t-fn">mset(x, y, z, c)</text><text x="180" y="110" class="t-dim">set one voxel</text>
+<text x="35" y="126" class="t-fn">mget(x, y, z)</text><text x="180" y="126" class="t-dim">read voxel (0 outside)</text>
+<text x="35" y="142" class="t-fn">mbox(x0,y0,z0,x1,y1,z1,c)</text><text x="205" y="142" class="t-dim">solid box</text>
+<text x="35" y="158" class="t-fn">mmodel(id, x, y, z, [rot], [flip])</text><text x="240" y="158" class="t-dim">stamp model</text>
+<text x="35" y="174" class="t-fn">mheight(x, y)</text><text x="180" y="174" class="t-dim">highest solid z (or -1)</text>
+<text x="35" y="190" class="t-fn">mclear([c])</text><text x="180" y="190" class="t-dim">fill whole map</text>
+
+<rect x="25" y="210" width="295" height="24" rx="4" class="sec-hdr"/>
+<text x="35" y="226" class="t-b t-teal">DRAW LAYER (Rebuilt every frame)</text>
+
+<text x="35" y="250" class="t-fn">cls()</text><text x="180" y="250" class="t-dim">clear drawn bricks</text>
+<text x="35" y="266" class="t-fn">vset(x, y, z, c)</text><text x="180" y="266" class="t-dim">draw voxel (w/ pswap)</text>
+<text x="35" y="282" class="t-fn">vget(x, y, z)</text><text x="180" y="282" class="t-dim">draw voxel, else map</text>
+<text x="35" y="298" class="t-fn">box(x0,y0,z0,x1,y1,z1,c,[hollow])</text><text x="235" y="298" class="t-dim">filled/hollow box</text>
+<text x="35" y="314" class="t-fn">sphere(x, y, z, r, c)</text><text x="180" y="314" class="t-dim">voxel ball (d² &le; r²+r)</text>
+<text x="35" y="330" class="t-fn">line3d(x0, y0, z0, x1, y1, z1, c)</text><text x="235" y="330" class="t-dim">3D Bresenham line</text>
+<text x="35" y="346" class="t-fn">model(id, x, y, z, [rot],[flip],[f])</text><text x="235" y="346" class="t-dim">draw animated model</text>
+<text x="35" y="362" class="t-fn">particle(x, y, z, c, [life])</text><text x="210" y="362" class="t-dim">stamped particle</text>
+
+<rect x="25" y="380" width="295" height="24" rx="4" class="sec-hdr"/>
+<text x="35" y="396" class="t-b t-teal">MODELS &amp; VOXELS</text>
+
+<text x="35" y="420" class="t-fn">newmodel(id, w, d, h, [frames])</text><text x="235" y="420" class="t-dim">define runtime model</text>
+<text x="35" y="436" class="t-fn">mpset(id, x, y, z, c, [frame])</text><text x="220" y="436" class="t-dim">set model voxel</text>
+<text x="35" y="452" class="t-fn">msize(id)</text><text x="180" y="452" class="t-dim">returns w, d, h</text>
+<text x="35" y="468" class="t-fn">mvox(id, [frame])</text><text x="180" y="468" class="t-dim">list of {x, y, z, c}</text>
+
+<!-- Column 2: Camera, Light & HUD -->
+<rect x="345" y="65" width="310" height="435" rx="6" class="k-bg"/>
+
+<rect x="350" y="70" width="300" height="24" rx="4" class="sec-hdr"/>
+<text x="360" y="86" class="t-b t-sky">CAMERA &amp; ENVIRONMENT</text>
+
+<text x="360" y="110" class="t-fn">camera(x, y, z, [zoom], [yaw])</text><text x="540" y="110" class="t-dim">target, zoom, yaw</text>
+<text x="360" y="126" class="t-fn">sun(dx, dy, dz, [strength])</text><text x="525" y="126" class="t-dim">sun direction vector</text>
+<text x="360" y="142" class="t-fn">sky(top, bottom)</text><text x="500" y="142" class="t-dim">palette gradient</text>
+<text x="360" y="158" class="t-fn">fog(c, density)</text><text x="490" y="158" class="t-dim">distance fog color &amp; d</text>
+<text x="360" y="174" class="t-fn">pal(i, r, g, b)</text><text x="480" y="174" class="t-dim">modify palette color</text>
+<text x="360" y="190" class="t-fn">palt()</text><text x="480" y="190" class="t-dim">restore cart palette</text>
+<text x="360" y="206" class="t-fn">pswap([a], [b])</text><text x="480" y="206" class="t-dim">remap color a &rarr; b</text>
+
+<rect x="350" y="225" width="300" height="24" rx="4" class="sec-hdr"/>
+<text x="360" y="241" class="t-b t-sky">HUD OVERLAY (768×432 Canvas)</text>
+
+<text x="360" y="265" class="t-fn">print(str, x, y, [c], [out], [sc])</text><text x="560" y="265" class="t-dim">5×7 font (6px adv)</text>
+<text x="360" y="281" class="t-fn">textw(str)</text><text x="480" y="281" class="t-dim">text pixel width (6 &times; len)</text>
+<text x="360" y="297" class="t-fn">rect(x0, y0, x1, y1, [c])</text><text x="520" y="297" class="t-dim">outline rectangle</text>
+<text x="360" y="313" class="t-fn">rectfill(x0, y0, x1, y1, [c])</text><text x="520" y="313" class="t-dim">solid rectangle</text>
+<text x="360" y="329" class="t-fn">circfill(x, y, r, [c])</text><text x="500" y="329" class="t-dim">filled circle (r &le; 512)</text>
+<text x="360" y="345" class="t-fn">spr2d(n, x, y, [scale])</text><text x="510" y="345" class="t-dim">built-in 8×8 icon (scale 1..16)</text>
+<text x="360" y="361" class="t-fn">project(x, y, z)</text><text x="490" y="361" class="t-dim">world voxel &rarr; screen (sx, sy)</text>
+
+<rect x="350" y="380" width="300" height="24" rx="4" class="sec-hdr"/>
+<text x="360" y="396" class="t-b t-sky">PERSISTENCE &amp; SYSTEM</text>
+
+<text x="360" y="420" class="t-fn">dset(key, val)</text><text x="480" y="420" class="t-dim">save number to cart storage</text>
+<text x="360" y="436" class="t-fn">dget(key)</text><text x="480" y="436" class="t-dim">read number from cart storage</text>
+<text x="360" y="452" class="t-fn">stat(n)</text><text x="440" y="452" class="t-dim">0:fps 1:update 2:draw 3:render 4:input</text>
+<text x="360" y="468" class="t-fn">printh(str)</text><text x="460" y="468" class="t-dim">log string to dev console</text>
+
+<!-- Column 3: Input, Audio & Math -->
+<rect x="675" y="65" width="305" height="435" rx="6" class="k-bg"/>
+
+<rect x="680" y="70" width="295" height="24" rx="4" class="sec-hdr"/>
+<text x="690" y="86" class="t-b t-amber">INPUT (4 Players + Touch/Gamepad)</text>
+
+<text x="690" y="110" class="t-fn">btn(b, [p])</text><text x="800" y="110" class="t-dim">is button held (0..5, 6:M)</text>
+<text x="690" y="126" class="t-fn">btnp(b, [p])</text><text x="800" y="126" class="t-dim">pressed this tick</text>
+<text x="690" y="142" class="t-fn">axis(n, [p])</text><text x="800" y="142" class="t-dim">stick/pad (-1..1; 0:x 1:y)</text>
+<text x="690" y="158" class="t-dim t-s">Buttons: 0:Left 1:Right 2:Up 3:Down 4:A(Z) 5:B(X) 6:M</text>
+
+<rect x="680" y="180" width="295" height="24" rx="4" class="sec-hdr"/>
+<text x="690" y="196" class="t-b t-amber">AUDIO SYNTHESIS</text>
+
+<text x="690" y="220" class="t-fn">tone(w, f0, [f1], d, [v], [ch])</text><text x="860" y="220" class="t-dim">synth tone</text>
+<text x="690" y="236" class="t-dim t-s">Waves: 'square', 'triangle', 'saw', 'noise' (4 channels)</text>
+<text x="690" y="254" class="t-fn">sfx(n, [ch])</text><text x="820" y="254" class="t-dim">trigger cart __sfx__ entry</text>
+<text x="690" y="270" class="t-fn">sfx(-1, [ch])</text><text x="820" y="270" class="t-dim">stop sound channel</text>
+<text x="690" y="286" class="t-fn">mute()</text><text x="820" y="286" class="t-dim">toggle sound mute (returns state)</text>
+
+<rect x="680" y="305" width="295" height="24" rx="4" class="sec-hdr"/>
+<text x="690" y="321" class="t-b t-amber">MATH &amp; TIME</text>
+
+<text x="690" y="345" class="t-fn">t()</text><text x="800" y="345" class="t-dim">seconds elapsed (+1/30 per tick)</text>
+<text x="690" y="361" class="t-fn">flr(x)</text><text x="800" y="361" class="t-dim">floor integer</text>
+<text x="690" y="377" class="t-fn">mid(x, y, z)</text><text x="800" y="377" class="t-dim">middle (clamp) value</text>
+<text x="690" y="393" class="t-fn">rnd([n])</text><text x="800" y="393" class="t-dim">random 0 &le; r &lt; n</text>
+<text x="690" y="409" class="t-fn">noise3(x, y, z)</text><text x="800" y="409" class="t-dim">3D Perlin noise (-1..1)</text>
+
+<rect x="680" y="435" width="295" height="55" rx="4" class="soft-coral"/>
+<text x="690" y="454" class="t-b t-coral">GAME LOOP HOOKS</text>
+<text x="690" y="470" class="t-fn">_init()</text><text x="750" y="470" class="t-dim t-s">called on cart boot</text>
+<text x="690" y="484" class="t-fn">_update()</text><text x="750" y="484" class="t-dim t-s">30 Hz logic</text>
+<text x="825" y="484" class="t-fn">_draw()</text><text x="880" y="484" class="t-dim t-s">display frame</text>
+
+</svg>

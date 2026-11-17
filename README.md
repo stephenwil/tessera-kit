@@ -84,3 +84,24 @@ The build compiles into:
   npm run dev
   ```
 - **Web Distribution**: Playable via standalone single-file `.html` on itch.io or USB, drag-and-drop `.tess.png` picture carts, or deep-linked into the hosted web console (`play.domain/?cart=...`). Private carts are strictly prevented from ever being bundled into public builds.
+
+---
+
+## 6. Lua API Quick Reference
+
+![Tessera High-Res Lua API Reference](docs/figures/06-api-cheat-sheet.svg)
+
+All coordinates are in voxel room space (`256×256×128`). Palette indices are `1..255` (`0` is transparent air). HUD coordinates are in `768×432` screen canvas space.
+
+### Core API Summary
+
+| Category | Functions | Notes |
+|---|---|---|
+| **Map Layer** (persists) | `mset`, `mget`, `mbox`, `mmodel`, `mheight`, `mclear` | Writes to persistent world voxel volume. Uploads modified bricks to GPU. |
+| **Draw Layer** (per-frame) | `cls`, `vset`, `vget`, `box`, `sphere`, `line3d`, `model`, `particle` | Rebuilt every frame. `cls()` zero-clears only bricks written since previous frame. |
+| **Models** | `newmodel`, `mpset`, `msize`, `mvox` | Runtime procedural voxel models (or loaded via `.vox` in `models/`). |
+| **Camera & View** | `camera`, `sun`, `sky`, `fog`, `pal`, `palt`, `pswap` | Orthographic camera basis, directional shadow rays, sky gradients, and palette remapping. |
+| **HUD & 2D Overlay** | `print`, `textw`, `rect`, `rectfill`, `circfill`, `spr2d`, `project` | Cleared every frame. Crisp 5×7 overlay font (6px advance) composited in raymarch pass. |
+| **Input** | `btn(b, [p])`, `btnp(b, [p])`, `axis(n, [p])` | Up to 4 players. Merges keyboard, gamepad, and touch controls. |
+| **Audio Synthesis** | `tone(wave, f0, [f1], dur, [vol], [ch])`, `sfx`, `mute` | 4 synth channels: `square`, `triangle`, `saw`, `noise` with frequency sliding. |
+| **Math & System** | `t()`, `flr`, `mid`, `rnd`, `noise3`, `stat`, `dset`, `dget`, `printh` | Fixed 30 Hz game time `t()`, 3D value noise, cart persistence, and diagnostics. |
