@@ -83,7 +83,7 @@ text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
 <text x="355" y="153" class="t-dim t-s">Collapses identical #RRGGBB across files</text>
 
 <rect x="345" y="170" width="280" height="42" rx="4" class="k-box"/>
-<text x="355" y="189" class="t-b">2. Budget Check (&le; 255 Colors)</text>
+<text x="355" y="189" class="t-b">2. Budget Check (&#8804; 255 Colors)</text>
 <text x="355" y="203" class="t-dim t-s">Slot 0 = Empty. Fails build if count &gt; 255</text>
 
 <rect x="345" y="220" width="280" height="65" rx="4" class="k-box"/>

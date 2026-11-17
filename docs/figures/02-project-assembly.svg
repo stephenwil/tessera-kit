@@ -83,7 +83,7 @@ text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
 <text x="370" y="155" class="t-dim t-s">• Concatenates Lua with -- file: banners</text>
 <text x="370" y="175" class="t-dim t-s">• Generates SourceMap (.tess.map.json)</text>
 <text x="370" y="195" class="t-dim t-s">• Deduplicates &amp; remaps .vox palettes</text>
-<text x="370" y="215" class="t-dim t-s">• Strict &le; 255 color budget check</text>
+<text x="370" y="215" class="t-dim t-s">• Strict &#8804; 255 color budget check</text>
 <text x="370" y="235" class="t-dim t-s">• Serializes to tessera cart v1 format</text>
 <text x="370" y="255" class="t-dim t-s">• Encodes steganographic .tess.png</text>
 

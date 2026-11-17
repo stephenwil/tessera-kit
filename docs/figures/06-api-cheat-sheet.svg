@@ -63,7 +63,7 @@ text { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
 <text x="35" y="266" class="t-fn">vset(x, y, z, c)</text><text x="180" y="266" class="t-dim">draw voxel (w/ pswap)</text>
 <text x="35" y="282" class="t-fn">vget(x, y, z)</text><text x="180" y="282" class="t-dim">draw voxel, else map</text>
 <text x="35" y="298" class="t-fn">box(x0,y0,z0,x1,y1,z1,c,[hollow])</text><text x="235" y="298" class="t-dim">filled/hollow box</text>
-<text x="35" y="314" class="t-fn">sphere(x, y, z, r, c)</text><text x="180" y="314" class="t-dim">voxel ball (d² &le; r²+r)</text>
+<text x="35" y="314" class="t-fn">sphere(x, y, z, r, c)</text><text x="180" y="314" class="t-dim">voxel ball (d² &#8804; r²+r)</text>
 <text x="35" y="330" class="t-fn">line3d(x0, y0, z0, x1, y1, z1, c)</text><text x="235" y="330" class="t-dim">3D Bresenham line</text>
 <text x="35" y="346" class="t-fn">model(id, x, y, z, [rot],[flip],[f])</text><text x="235" y="346" class="t-dim">draw animated model</text>
 <text x="35" y="362" class="t-fn">particle(x, y, z, c, [life])</text><text x="210" y="362" class="t-dim">stamped particle</text>
@@ -88,18 +88,18 @@ text { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
 <text x="360" y="158" class="t-fn">fog(c, density)</text><text x="490" y="158" class="t-dim">distance fog color &amp; d</text>
 <text x="360" y="174" class="t-fn">pal(i, r, g, b)</text><text x="480" y="174" class="t-dim">modify palette color</text>
 <text x="360" y="190" class="t-fn">palt()</text><text x="480" y="190" class="t-dim">restore cart palette</text>
-<text x="360" y="206" class="t-fn">pswap([a], [b])</text><text x="480" y="206" class="t-dim">remap color a &rarr; b</text>
+<text x="360" y="206" class="t-fn">pswap([a], [b])</text><text x="480" y="206" class="t-dim">remap color a &#8594; b</text>
 
 <rect x="350" y="225" width="300" height="24" rx="4" class="sec-hdr"/>
 <text x="360" y="241" class="t-b t-sky">HUD OVERLAY (768×432 Canvas)</text>
 
 <text x="360" y="265" class="t-fn">print(str, x, y, [c], [out], [sc])</text><text x="560" y="265" class="t-dim">5×7 font (6px adv)</text>
-<text x="360" y="281" class="t-fn">textw(str)</text><text x="480" y="281" class="t-dim">text pixel width (6 &times; len)</text>
+<text x="360" y="281" class="t-fn">textw(str)</text><text x="480" y="281" class="t-dim">text pixel width (6 &#215; len)</text>
 <text x="360" y="297" class="t-fn">rect(x0, y0, x1, y1, [c])</text><text x="520" y="297" class="t-dim">outline rectangle</text>
 <text x="360" y="313" class="t-fn">rectfill(x0, y0, x1, y1, [c])</text><text x="520" y="313" class="t-dim">solid rectangle</text>
-<text x="360" y="329" class="t-fn">circfill(x, y, r, [c])</text><text x="500" y="329" class="t-dim">filled circle (r &le; 512)</text>
+<text x="360" y="329" class="t-fn">circfill(x, y, r, [c])</text><text x="500" y="329" class="t-dim">filled circle (r &#8804; 512)</text>
 <text x="360" y="345" class="t-fn">spr2d(n, x, y, [scale])</text><text x="510" y="345" class="t-dim">built-in 8×8 icon (scale 1..16)</text>
-<text x="360" y="361" class="t-fn">project(x, y, z)</text><text x="490" y="361" class="t-dim">world voxel &rarr; screen (sx, sy)</text>
+<text x="360" y="361" class="t-fn">project(x, y, z)</text><text x="490" y="361" class="t-dim">world voxel &#8594; screen (sx, sy)</text>
 
 <rect x="350" y="380" width="300" height="24" rx="4" class="sec-hdr"/>
 <text x="360" y="396" class="t-b t-sky">PERSISTENCE &amp; SYSTEM</text>
@@ -135,7 +135,7 @@ text { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
 <text x="690" y="345" class="t-fn">t()</text><text x="800" y="345" class="t-dim">seconds elapsed (+1/30 per tick)</text>
 <text x="690" y="361" class="t-fn">flr(x)</text><text x="800" y="361" class="t-dim">floor integer</text>
 <text x="690" y="377" class="t-fn">mid(x, y, z)</text><text x="800" y="377" class="t-dim">middle (clamp) value</text>
-<text x="690" y="393" class="t-fn">rnd([n])</text><text x="800" y="393" class="t-dim">random 0 &le; r &lt; n</text>
+<text x="690" y="393" class="t-fn">rnd([n])</text><text x="800" y="393" class="t-dim">random 0 &#8804; r &lt; n</text>
 <text x="690" y="409" class="t-fn">noise3(x, y, z)</text><text x="800" y="409" class="t-dim">3D Perlin noise (-1..1)</text>
 
 <rect x="680" y="435" width="295" height="55" rx="4" class="soft-coral"/>
