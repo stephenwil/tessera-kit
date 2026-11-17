@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/tessera-banner.png" alt="Tessera Developer Kit" width="480">
+</p>
+
 # Tessera Kit
 
 Developer tools, CLI, MagicaVoxel pipeline, and project scaffolder for the Tessera High-Res voxel fantasy console.
