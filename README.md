@@ -104,7 +104,30 @@ All coordinates are in voxel room space (`256×256×128`). Palette indices are `
 | **HUD & 2D Overlay** | `print`, `textw`, `rect`, `rectfill`, `circfill`, `spr2d`, `project` | Cleared every frame. Crisp 5×7 overlay font (6px advance) composited in raymarch pass. |
 | **Input** | `btn(b, [p])`, `btnp(b, [p])`, `axis(n, [p])` | Up to 4 players. Merges keyboard, gamepad, and touch controls. |
 | **Audio Synthesis** | `tone(wave, f0, [f1], dur, [vol], [ch])`, `sfx`, `mute` | 4 synth channels: `square`, `triangle`, `saw`, `noise` with frequency sliding. |
-| **Math & System** | `t()`, `flr`, `mid`, `rnd`, `noise3`, `stat`, `dset`, `dget`, `printh` | Fixed 30 Hz game time `t()`, 3D value noise, cart persistence, and diagnostics. |
+| **Math & System**
+
+### Background Music & Audio Synthesis
+
+Tessera synthesizes audio in real-time across **4 concurrent channels** (`ch = 0..3`) via Web Audio using `tone(wave, f0, [f1], dur, [vol], [ch])`.
+
+To sequence background music in a cart, schedule notes along the fixed 30 Hz timer `t()`:
+
+```lua
+-- Simple 4-note background music sequencer
+local melody = { 261.63, 329.63, 392.00, 523.25 } -- C4, E4, G4, C5
+local last_step = -1
+
+function _update()
+  -- Step notes at 4 Hz (quarter seconds)
+  local step = flr(t() * 4) % #melody + 1
+  if step ~= last_step then
+    last_step = step
+    -- Play note on channel 0 (triangle wave, 0.2s duration, 0.15 volume)
+    tone("triangle", melody[step], melody[step], 0.2, 0.15, 0)
+  end
+end
+```
+ | `t()`, `flr`, `mid`, `rnd`, `noise3`, `stat`, `dset`, `dget`, `printh` | Fixed 30 Hz game time `t()`, 3D value noise, cart persistence, and diagnostics. |
 
 ---
 
