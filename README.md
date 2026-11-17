@@ -105,3 +105,26 @@ All coordinates are in voxel room space (`256×256×128`). Palette indices are `
 | **Input** | `btn(b, [p])`, `btnp(b, [p])`, `axis(n, [p])` | Up to 4 players. Merges keyboard, gamepad, and touch controls. |
 | **Audio Synthesis** | `tone(wave, f0, [f1], dur, [vol], [ch])`, `sfx`, `mute` | 4 synth channels: `square`, `triangle`, `saw`, `noise` with frequency sliding. |
 | **Math & System** | `t()`, `flr`, `mid`, `rnd`, `noise3`, `stat`, `dset`, `dget`, `printh` | Fixed 30 Hz game time `t()`, 3D value noise, cart persistence, and diagnostics. |
+
+---
+
+## 7. Cart Distribution, Web Delivery & Tailnet Links
+
+![Cart Distribution & Ingestion Pipeline](docs/figures/05-scaffolder-distribution.svg)
+
+Carts exist as either human-readable `.tess` text files or steganographic `.tess.png` picture carts (which hide compressed cart text in the lower 2 bits of the RGBA channels, holding up to 64 KiB).
+
+```
+   [ Local Dev Server (tessera dev) ] ──────► http://localhost:3000/
+                                    │
+                                    ├───► Drag-and-drop .tess / .tess.png
+                                    ├───► Deep link (?cart=<slug or url>)
+                                    └───► File picker ("Load cart...")
+```
+
+### Tailscale Remote Testing
+When running the development server or host console (`0.0.0.0`), the runtime and carts can be loaded across your private Tailnet on any connected device (desktop, laptop, tablet, mobile):
+
+- **Console Root / Picker**: `http://<tailscale-ip>:5173/` or `http://<tailscale-ip>:3000/`
+- **Direct Cart Launch**: `http://<tailscale-ip>:5173/?cart=<cart-id>`
+- **Live In-Console Editor**: Press **F4** on any connected browser keyboard to live-edit Lua 5.4 code directly over the network with instant state-preserving hot reload.
