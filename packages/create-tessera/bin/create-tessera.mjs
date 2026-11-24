@@ -139,9 +139,9 @@ const projectPkg = {
   type: 'module',
   scripts: {
     dev: 'tessera dev',
-    pack: 'tessera pack dist/' + manifest.id + '.tess',
-    build: 'tessera pack dist/' + manifest.id + '.tess && tessera export dist/' + manifest.id + '.tess',
-    check: 'tessera check dist/' + manifest.id + '.tess'
+    pack: 'tessera pack',
+    build: 'tessera pack && tessera export',
+    check: 'tessera check'
   },
   devDependencies: {
     '@stephenwil/tessera': '^0.1.0'

@@ -1,14 +1,26 @@
+import { assembleProject } from "./project.js";
 import fs from "node:fs";
 import path from "node:path";
 import { parseCart } from "./cart/tess.js";
 
 export function checkCartCli(cartPath) {
-  const fullCartPath = path.resolve(process.cwd(), cartPath);
-  if (!fs.existsSync(fullCartPath)) {
-    throw new Error(`Cart file not found: ${cartPath}`);
-  }
+  let fullCartPath = path.resolve(process.cwd(), cartPath || ".");
+  let cartText = null;
 
-  const cartText = fs.readFileSync(fullCartPath, "utf8");
+  const isDir = fs.existsSync(fullCartPath) && fs.statSync(fullCartPath).isDirectory();
+  const manifestInDir = isDir && fs.existsSync(path.join(fullCartPath, "tessera.json"));
+  const isManifest = !isDir && fullCartPath.endsWith("tessera.json") && fs.existsSync(fullCartPath);
+
+  if (manifestInDir || isManifest) {
+    const projectDir = isManifest ? path.dirname(fullCartPath) : fullCartPath;
+    cartText = assembleProject(projectDir);
+  } else if (fs.existsSync(fullCartPath) && fs.statSync(fullCartPath).isFile()) {
+    cartText = fs.readFileSync(fullCartPath, "utf8");
+  } else if (fs.existsSync(path.resolve(process.cwd(), "tessera.json"))) {
+    cartText = assembleProject(process.cwd());
+  } else {
+    throw new Error(`Cart file or tessera.json not found: ${cartPath}`);
+  }
   const parsed = parseCart(cartText);
 
   const errors = [];

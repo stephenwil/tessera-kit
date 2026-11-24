@@ -1,3 +1,4 @@
+import { assembleProject } from "./project.js";
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseCart } from './cart/tess.js';
@@ -6,12 +7,36 @@ import { decodePng, encodePng } from './cart/pngfile.js';
 import { makeLabel } from './shell/label.js';
 
 export async function packCartCli(cartPath, labelPath = null, outputPath = null) {
-  const fullCartPath = path.resolve(process.cwd(), cartPath);
-  if (!fs.existsSync(fullCartPath)) {
-    throw new Error(`Cart file not found: ${cartPath}`);
-  }
+  let fullCartPath = path.resolve(process.cwd(), cartPath || ".");
+  let cartText = null;
 
-  const cartText = fs.readFileSync(fullCartPath, 'utf8');
+  // Check if target is a project directory or tessera.json
+  const isDir = fs.existsSync(fullCartPath) && fs.statSync(fullCartPath).isDirectory();
+  const manifestInDir = isDir && fs.existsSync(path.join(fullCartPath, "tessera.json"));
+  const isManifest = !isDir && fullCartPath.endsWith("tessera.json") && fs.existsSync(fullCartPath);
+
+  if (manifestInDir || isManifest) {
+    const projectDir = isManifest ? path.dirname(fullCartPath) : fullCartPath;
+    cartText = assembleProject(projectDir);
+    const parsed = parseCart(cartText);
+    const id = parsed.meta?.id || "cart";
+    fullCartPath = path.join(projectDir, "dist", id + ".tess");
+    fs.mkdirSync(path.dirname(fullCartPath), { recursive: true });
+    fs.writeFileSync(fullCartPath, cartText, "utf8");
+  } else if (fs.existsSync(fullCartPath) && fs.statSync(fullCartPath).isFile()) {
+    cartText = fs.readFileSync(fullCartPath, "utf8");
+  } else if (fs.existsSync(path.resolve(process.cwd(), "tessera.json"))) {
+    // Current directory is a project
+    cartText = assembleProject(process.cwd());
+    const parsed = parseCart(cartText);
+    const id = parsed.meta?.id || "cart";
+    const projectDir = process.cwd();
+    fullCartPath = path.join(projectDir, "dist", id + ".tess");
+    fs.mkdirSync(path.dirname(fullCartPath), { recursive: true });
+    fs.writeFileSync(fullCartPath, cartText, "utf8");
+  } else {
+    throw new Error(`Cart file or tessera.json not found: ${cartPath}`);
+  }
   let labelRgba = null;
 
   if (labelPath) {

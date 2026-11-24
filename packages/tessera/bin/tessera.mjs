@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import fs from 'node:fs';
+
 import path from 'node:path';
 import { initProject } from '../src/init.js';
 import { packCartCli, unpackCartCli } from '../src/pack.js';
@@ -104,10 +106,14 @@ async function main() {
       }
 
       case 'pack': {
-        const cartPath = positional[0];
+        let cartPath = positional[0];
         if (!cartPath) {
-          console.error('Error: specify cart path (e.g. tessera pack cart.tess)');
-          process.exit(1);
+          if (fs.existsSync(path.resolve(process.cwd(), "tessera.json"))) {
+            cartPath = ".";
+          } else {
+            console.error('Error: specify cart path (e.g. tessera pack cart.tess)');
+            process.exit(1);
+          }
         }
         const labelPath = positional[1] || getOption('--label');
         const outPath = getOption('--out', '-o');
@@ -152,10 +158,14 @@ async function main() {
 
 
       case 'export': {
-        const cartPath = positional[0];
+        let cartPath = positional[0];
         if (!cartPath) {
-          console.error('Error: specify cart path (e.g. tessera export cart.tess)');
-          process.exit(1);
+          if (fs.existsSync(path.resolve(process.cwd(), "tessera.json"))) {
+            cartPath = ".";
+          } else {
+            console.error('Error: specify cart path (e.g. tessera export cart.tess)');
+            process.exit(1);
+          }
         }
         const outPath = getOption('--out', '-o');
         const res = exportHtmlCli(cartPath, outPath);
@@ -166,16 +176,24 @@ async function main() {
 
       case 'check':
       case 'validate': {
-        const cartPath = positional[0];
+        let cartPath = positional[0];
         if (!cartPath) {
-          console.error('Error: specify cart path (e.g. tessera check cart.tess)');
-          process.exit(1);
+          if (fs.existsSync(path.resolve(process.cwd(), "tessera.json"))) {
+            cartPath = ".";
+          } else {
+            console.error('Error: specify cart path (e.g. tessera check cart.tess)');
+            process.exit(1);
+          }
         }
         console.log(`Checking ${cartPath}...`);
         const res = await checkCartCli(cartPath);
-        console.log(`✓ Cart parsed successfully: title="${res.title}", id="${res.id}", author="${res.author}"`);
-        console.log(`  Palette: ${res.paletteCount} colors, Models: ${res.modelCount}, SFX: ${res.sfxCount}, Lua: ${res.luaLines} lines`);
-        console.log(`✓ ${res.ticksExecuted} ticks & draws executed cleanly without Lua errors!`);
+        if (res.ok) {
+          console.log(`✓ Cart check passed: id="${res.parsed?.meta?.id || "unknown"}", title="${res.parsed?.meta?.title || "untitled"}"`);
+        } else {
+          console.error(`✗ Cart check failed:`);
+          for (const err of res.errors) console.error(`  - ${err}`);
+          process.exit(1);
+        }
         break;
       }
 
