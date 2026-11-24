@@ -1,0 +1,27 @@
+{
+  "name": "@stephenwil/tessera",
+  "version": "0.1.0",
+  "description": "Developer CLI and tooling for the Tessera High-Res voxel fantasy console",
+  "type": "module",
+  "bin": {
+    "tessera": "./bin/tessera.mjs"
+  },
+  "main": "./src/index.js",
+  "files": [
+    "bin",
+    "src",
+    "template"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "tessera",
+    "voxel",
+    "fantasy-console",
+    "gamedev",
+    "cli"
+  ],
+  "author": "Stephen Wilson",
+  "license": "MIT"
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@stephenwil/create-tessera",
+  "version": "0.1.0",
+  "description": "Create a new Tessera High-Res voxel fantasy console cart project",
+  "type": "module",
+  "bin": {
+    "create-tessera": "./bin/create-tessera.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "template"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "create-tessera",
+    "tessera",
+    "scaffolder",
+    "gamedev"
+  ],
+  "author": "Stephen Wilson",
+  "license": "MIT"
+}
