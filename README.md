@@ -189,6 +189,15 @@ Carts exist as either human-readable `.tess` text files or steganographic `.tess
                                     └───► File picker ("Load cart...")
 ```
 
+### Downloading Demo Carts (Tessera Showcase)
+
+The bundled CLI runner keeps only the minimal `hello` starter cart so your dev server and exported `.html` builds stay lean (~647 KiB). To play, inspect, or download full demo carts (`.tess` source and `.tess.png` picture carts), visit the **[Tessera Cartridge Showcase](https://stephenwil.github.io/tessera-showcase/)**:
+
+```sh
+# Open any downloaded demo cart locally with live reload
+npx @stephenwil/tessera dev path/to/downloaded.tess
+```
+
 ### Local Network & Tailscale Testing
 `tessera dev` binds to `0.0.0.0:3000` by default, so you can playtest on phones, tablets, or laptops across your LAN or Tailnet:
 

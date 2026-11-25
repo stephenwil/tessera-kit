@@ -45,3 +45,7 @@ Add to your MCP client configuration (Claude Desktop, Cursor, T3 Code, etc.):
 ```
 
 Exposes 8 tools: `tessera_init_cart`, `tessera_check_cart`, `tessera_assemble_cart`, `tessera_pack_cart`, `tessera_export_html`, `tessera_inspect_vox`, `tessera_check_palette_budget`, and `tessera_api_docs`.
+
+## Demo Carts
+
+The bundled runner includes only the minimal `hello` cart to keep exported HTML games lean. Play and download full demo carts (`.tess` and `.tess.png`) from the **[Tessera Cartridge Showcase](https://stephenwil.github.io/tessera-showcase/)**, then run them locally with `npx @stephenwil/tessera dev <cart.tess>`.

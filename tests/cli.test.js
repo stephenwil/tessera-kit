@@ -93,3 +93,12 @@ test('create-tessera CLI generates valid Tessera API calls', async () => {
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
+
+test('bundled runner.html contains only the basic hello cart', () => {
+  const runnerPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../packages/tessera/template/runner.html');
+  const html = fs.readFileSync(runnerPath, 'utf8');
+  assert.ok(html.includes('carts/hello.tess'), 'Minimal runner should include basic hello cart');
+  for (const excluded of ['hatchase', 'bastionsiege', 'bramblecourt', 'voiddrifter', 'turbocircuit', 'relicshifter', 'moonlitgarden', 'prismrelay', 'bench']) {
+    assert.equal(html.toLowerCase().includes(excluded), false, `Minimal runner must not bundle demo cart: ${excluded}`);
+  }
+});

@@ -321,7 +321,7 @@ export function startMcpServer() {
           capabilities: { tools: {} },
           serverInfo: {
             name: '@stephenwil/tessera-mcp',
-            version: '0.1.3'
+            version: '0.1.4'
           }
         }
       });

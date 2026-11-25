@@ -148,7 +148,7 @@ const projectPkg = {
     check: 'tessera check'
   },
   devDependencies: {
-    '@stephenwil/tessera': '^0.1.3'
+    '@stephenwil/tessera': '^0.1.4'
   }
 };
 fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify(projectPkg, null, 2) + '\n');
