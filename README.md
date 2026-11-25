@@ -261,3 +261,9 @@ Or using the dedicated package:
 | `tessera_inspect_vox` | `voxPath` | Inspects MagicaVoxel `.vox` dimensions, models, frame count, and color palette. |
 | `tessera_check_palette_budget` | `projectDir`, `maxColors` | Scans all models, deduplicates colors, and verifies compliance with the ≤ 255 palette limit. |
 | `tessera_api_docs` | `topic` (`all`, `map`, `draw`, `collision`, `camera`, `hud`, `input`, `audio`, `math`) | Retrieves live, accurate Lua API signatures and notes directly into agent context. |
+
+---
+
+## License
+
+MIT © Stephen Wilson — see [LICENSE](LICENSE).

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import { handleToolCall } from '../packages/tessera/src/mcp.js';
 
@@ -48,7 +49,7 @@ test('MCP Tool Handlers: docs, init, check, assemble, pack', async (t) => {
 });
 
 test('MCP Protocol JSON-RPC Stdio Handshake & Tool Calling', async (t) => {
-  const mcpBin = path.resolve('../tessera-kit/packages/tessera/bin/tessera.mjs');
+  const mcpBin = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../packages/tessera/bin/tessera.mjs');
   const proc = spawn('node', [mcpBin, 'mcp'], {
     stdio: ['pipe', 'pipe', 'inherit']
   });
