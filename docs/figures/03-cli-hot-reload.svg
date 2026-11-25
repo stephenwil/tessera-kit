@@ -55,8 +55,8 @@ text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
   </marker>
 </defs>
 
-<text x="20" y="32" class="t-h t-teal">3. CLI Workflows: Live Dev, Test &amp; Build</text>
-<text x="20" y="52" class="t-dim t-s">State-preserving hot reload loop, headless Node tests, and single-command release.</text>
+<text x="20" y="32" class="t-h t-teal">3. CLI Workflows: Dev, Check, Pack, Export &amp; MCP</text>
+<text x="20" y="52" class="t-dim t-s">Live reload dev server, cart validation, picture-cart &amp; HTML packaging, and AI agent MCP server.</text>
 
 <!-- Dev Server Box -->
 <rect x="30" y="75" width="440" height="225" rx="8" class="soft-teal"/>
@@ -71,7 +71,7 @@ text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
 <text x="370" y="170" class="t-dim t-s" text-anchor="middle">http://localhost:3000</text>
 
 <path d="M 210 145 L 288 145" class="k-line" marker-end="url(#ar-teal)"/>
-<text x="250" y="137" class="t-dim t-s" text-anchor="middle">WS update</text>
+<text x="250" y="137" class="t-dim t-s" text-anchor="middle">SSE reload</text>
 
 <path d="M 290 180 L 212 180" class="k-dash" marker-end="url(#ar)"/>
 <text x="250" y="196" class="t-dim t-s" text-anchor="middle">error feedback</text>
@@ -83,15 +83,15 @@ text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
 
 <!-- Test & Build Boxes -->
 <rect x="510" y="75" width="460" height="105" rx="8" class="soft-sky"/>
-<text x="530" y="105" class="t-h">tessera test (Headless Test Harness)</text>
-<text x="530" y="130" class="t-dim t-s">• Runs core in Node.js via wasmoon without browser / GPU</text>
-<text x="530" y="148" class="t-dim t-s">• Deterministic step(N) tick advancement (30 Hz loop)</text>
-<text x="530" y="166" class="t-dim t-s">• Simulates button presses and asserts Lua table &amp; voxel states</text>
+<text x="530" y="105" class="t-h">tessera check &amp; tessera mcp</text>
+<text x="530" y="130" class="t-dim t-s">• check: validates manifest, cart sections &amp; Lua blocks</text>
+<text x="530" y="148" class="t-dim t-s">• mcp: stdio MCP server (@stephenwil/tessera-mcp)</text>
+<text x="530" y="166" class="t-dim t-s">• 8 agent tools: init, check, pack, export, vox &amp; live API docs</text>
 
 <rect x="510" y="195" width="460" height="105" rx="8" class="soft-amber"/>
-<text x="530" y="225" class="t-h">tessera build (Packaging &amp; Standalone)</text>
-<text x="530" y="250" class="t-dim t-s">• Validates Lua syntax, model room bounds &amp; palette limits</text>
-<text x="530" y="268" class="t-dim t-s">• Generates .tess, .tess.png picture cart, and standalone .html</text>
-<text x="530" y="286" class="t-dim t-s">• Inlines engine + wasm into offline playable file</text>
+<text x="530" y="225" class="t-h">tessera pack &amp; tessera export</text>
+<text x="530" y="250" class="t-dim t-s">• pack: encodes steganographic 256×256 .tess.png cart</text>
+<text x="530" y="268" class="t-dim t-s">• export: builds self-contained offline .html runner</text>
+<text x="530" y="286" class="t-dim t-s">• npm run build runs pack + export into dist/</text>
 
 </svg>

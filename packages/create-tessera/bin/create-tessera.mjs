@@ -13,7 +13,7 @@ const targetDir = path.resolve(process.cwd(), target);
 const HELP = `
 Usage:
   npm create @stephenwil/tessera <directory>
-  npx create-tessera <directory>
+  npx @stephenwil/create-tessera <directory>
 
 Options:
   --help, -h          Show help message
@@ -64,9 +64,10 @@ local px, py, pz = 128, 128, 2
 local angle = 0
 
 function _init()
-  -- Set camera position & look target
-  cam(128, 64, 48, 1.2, 0, 30)
-  camtarget(128, 128, 10)
+  -- Orthographic camera target (x, y, z, zoom, yaw) + lighting
+  camera(128, 128, 6, 1.4, 0)
+  sun(-0.4, -0.6, 0.7, 1)
+  sky(1, 2)
   fog(1, 0.002)
 
   -- Draw a stone platform on the persistent map layer
@@ -75,12 +76,12 @@ function _init()
 end
 
 function _update()
-  -- Input handling: Arrow keys / Gamepad D-pad
+  -- Input handling: Arrow keys / WASD / Gamepad D-pad (up = +y north)
   local speed = 1.0
   if btn(0) then px = px - speed end
   if btn(1) then px = px + speed end
-  if btn(2) then py = py - speed end
-  if btn(3) then py = py + speed end
+  if btn(2) then py = py + speed end
+  if btn(3) then py = py - speed end
 
   -- Clamp inside platform boundary
   px = mid(105, px, 151)
@@ -91,21 +92,24 @@ end
 
 function _draw()
   -- Dynamic drawing layer: cls() clears previous frame voxels
-  cls(0)
+  cls()
+
+  -- Follow the player smoothly
+  camera(px, py, 6, 1.4, 0)
 
   -- Draw player avatar sphere
   sphere(px, py, pz + 4, 3, 9)
 
-  -- Draw rotating orbital particle
+  -- Draw rotating orbital voxel
   local ox = px + math.cos(angle) * 8
   local oy = py + math.sin(angle) * 8
   vset(ox, oy, pz + 4, 11)
 
   -- HUD Canvas Overlay (768x432 resolution)
-  rectfill(20, 20, 260, 60, 1)
-  rect(20, 20, 260, 60, 7)
+  rectfill(20, 20, 290, 62, 1)
+  rect(20, 20, 290, 62, 7)
   print("${manifest.title}", 32, 28, 7)
-  print("Use Arrows / Gamepad to move", 32, 42, 6)
+  print("Arrows / WASD / Gamepad to move", 32, 44, 6)
 end
 `;
 fs.writeFileSync(path.join(targetDir, 'src/main.lua'), starterLua);
@@ -144,7 +148,7 @@ const projectPkg = {
     check: 'tessera check'
   },
   devDependencies: {
-    '@stephenwil/tessera': '^0.1.0'
+    '@stephenwil/tessera': '^0.1.3'
   }
 };
 fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify(projectPkg, null, 2) + '\n');
@@ -162,6 +166,10 @@ const vscodeSettings = {
     "sphere",
     "line3d",
     "model",
+    "newmodel",
+    "mpset",
+    "msize",
+    "mvox",
     "particle",
     "mset",
     "mget",
@@ -169,13 +177,14 @@ const vscodeSettings = {
     "mmodel",
     "mheight",
     "mclear",
-    "cam",
-    "camtarget",
-    "camfov",
+    "camera",
+    "sun",
+    "sky",
     "fog",
     "pal",
     "palt",
     "pswap",
+    "quality",
     "cls",
     "rect",
     "rectfill",
@@ -189,10 +198,16 @@ const vscodeSettings = {
     "sweep_box",
     "sweep_down",
     "vheight",
+    "tone",
     "sfx",
+    "mute",
     "music",
+    "music_stop",
+    "music_pos",
+    "music_vol",
     "btn",
     "btnp",
+    "axis",
     "t",
     "flr",
     "mid",
@@ -200,7 +215,8 @@ const vscodeSettings = {
     "noise3",
     "stat",
     "dget",
-    "dset"
+    "dset",
+    "printh"
   ]
 };
 fs.writeFileSync(path.join(targetDir, '.vscode/settings.json'), JSON.stringify(vscodeSettings, null, 2) + '\n');
@@ -215,6 +231,9 @@ A game for the [Tessera High-Res](https://github.com/stephenwil/tessera-kit) vox
 \`\`\`sh
 # Start live development server
 npm run dev
+
+# Validate cart syntax & manifest
+npm run check
 
 # Build .tess and .tess.png cartridge
 npm run pack

@@ -67,9 +67,10 @@ export function startDevCli(targetPath = '.', options = {}) {
 
   // File watcher with debounce
   let debounceTimer = null;
+  let watcher = null;
   const watchDir = isFile ? fullTarget : projectDir;
   try {
-    fs.watch(watchDir, { recursive: true }, (_event, filename) => {
+    watcher = fs.watch(watchDir, { recursive: true }, (_event, filename) => {
       if (filename && (filename.startsWith('.') || filename.includes('node_modules') || filename.includes('dist'))) {
         return;
       }
@@ -127,7 +128,7 @@ export function startDevCli(targetPath = '.', options = {}) {
     res.end('Not Found');
   });
 
-  const port = options.port || 3000;
+  const port = options.port ?? 3000;
   const host = options.host || '0.0.0.0';
 
   return new Promise((resolve, reject) => {
@@ -137,7 +138,7 @@ export function startDevCli(targetPath = '.', options = {}) {
         server,
         port,
         host,
-        close: () => server.close(),
+        close: () => { clearTimeout(debounceTimer); try { watcher?.close(); } catch {} server.close(); },
       });
     });
   });

@@ -4,21 +4,59 @@
 
 # Tessera Kit
 
-Developer tools, CLI, MagicaVoxel pipeline, and project scaffolder for the Tessera High-Res voxel fantasy console.
+Developer tools, CLI, MagicaVoxel pipeline, project scaffolder, and Model Context Protocol (MCP) server for the **Tessera High-Res** voxel fantasy console (`256×256×128` voxel volume, `768×432` WebGL2 raymarcher, Lua 5.4).
 
-This repository provides:
-- **`@stephenwil/tessera`**: The developer CLI (`dev`, `build`, `test`), live-reload development server, `.vox` importer, and single-file HTML exporter.
-- **`@stephenwil/create-tessera`**: Project generator (`npm create @stephenwil/tessera`).
+All three packages are published on the **public npm registry**:
+
+- **[`@stephenwil/tessera`](https://www.npmjs.com/package/@stephenwil/tessera)**: Unified developer CLI (`init`, `dev`, `pack`, `unpack`, `vox`, `export`, `check`, `mcp`), live-reload dev server, `.vox` importer, `.tess.png` picture-cart codec, single-file HTML exporter, and built-in MCP server.
+- **[`@stephenwil/create-tessera`](https://www.npmjs.com/package/@stephenwil/create-tessera)**: Zero-setup project scaffolder (`npm create @stephenwil/tessera <my-game>`).
+- **[`@stephenwil/tessera-mcp`](https://www.npmjs.com/package/@stephenwil/tessera-mcp)**: Dedicated standalone MCP server executable for AI coding agents.
 
 ---
 
-## 1. System Architecture & Package Ecosystem
+## Quick Start (npm)
+
+Create, run, pack, and export a voxel game without cloning any repositories:
+
+```sh
+# 1. Scaffold a new cart project
+npm create @stephenwil/tessera my-game
+cd my-game
+npm install
+
+# 2. Start the live hot-reload development server (http://localhost:3000)
+npm run dev
+
+# 3. Validate syntax and manifest structure
+npm run check
+
+# 4. Pack into a plain-text .tess cart and steganographic .tess.png picture cart
+npm run pack
+
+# 5. Export a self-contained offline single-file HTML game (dist/my-game.html)
+npm run build
+```
+
+You can also run any CLI command directly via `npx` without installing globally:
+
+```sh
+npx @stephenwil/tessera dev
+npx @stephenwil/tessera check
+npx @stephenwil/tessera pack
+npx @stephenwil/tessera export
+npx @stephenwil/tessera vox models/hero.vox --name hero --gen-pal
+npx @stephenwil/tessera mcp
+```
+
+---
+
+## 1. System Architecture & npm Package Ecosystem
 
 ![Architecture and Package Ecosystem](docs/figures/01-architecture-ecosystem.svg)
 
-- **`tessera-high-res`** (Engine): Private repository holding the core 256×256×128 volume, WebGL2 768×432 raymarcher, `wasmoon` Lua runtime, and engine regression tests. Builds the minified core engine.
-- **`tessera-kit`** (Tooling): Developer tooling repository publishing private npm packages to GitHub Packages (`@stephenwil/*`).
-- **`tessera-hatchase`** (Game Cart): Standalone game repository structured as a Tessera project with `tessera.json`.
+- **`tessera-high-res` (Engine)**: Core 256×256×128 voxel volume, WebGL2 768×432 raymarcher, `wasmoon` Lua 5.4 runtime, and regression suite. Compiles the self-contained web runner bundled into `@stephenwil/tessera`.
+- **`tessera-kit` (Public npm Tooling)**: Publishes `@stephenwil/tessera`, `@stephenwil/create-tessera`, and `@stephenwil/tessera-mcp` to the public npm registry.
+- **Cart Projects (`my-game/`)**: Standard `tessera.json` projects using `@stephenwil/tessera` as a `devDependency` to develop, check, pack, and export standalone carts.
 
 ---
 
@@ -26,7 +64,7 @@ This repository provides:
 
 ![Project Manifest & Assembly Pipeline](docs/figures/02-project-assembly.svg)
 
-Each project defines its cart metadata, file ordering, model pivots, and asset sources in `tessera.json`:
+Each project defines its cart metadata, script order, model pivots, and asset sources in `tessera.json`:
 
 ```json
 {
@@ -44,20 +82,28 @@ Each project defines its cart metadata, file ordering, model pivots, and asset s
 }
 ```
 
-The build compiles into:
-- **`dist/<id>.tess`**: Canonical plain text cart.
-- **`dist/<id>.tess.png`**: Steganographic picture cart with embedded data.
-- **`dist/<id>.html`**: Offline standalone single-file runner.
+Running `npm run pack` / `npm run build` (or zero-argument `tessera pack` / `tessera export` inside the project root) assembles `tessera.json` and emits:
+
+- **`dist/<id>.tess`**: Canonical plain-text cart (`tessera cart v1`).
+- **`dist/<id>.tess.png`**: Steganographic 256×256 picture cart with hidden deflate-compressed bytes.
+- **`dist/<id>.html`**: Offline standalone single-file HTML game playable anywhere without a server.
 
 ---
 
-## 3. CLI Workflow & State-Preserving Hot Reload
+## 3. CLI Workflow & Live Hot Reload
 
-![CLI Workflows: Dev, Test & Build](docs/figures/03-cli-hot-reload.svg)
+![CLI Workflows: Dev, Check, Pack, Export & MCP](docs/figures/03-cli-hot-reload.svg)
 
-- **`tessera dev`**: Starts local development server at `http://localhost:3000`. Features **state-preserving hot reload** (retains Lua game state, player position, and camera across script changes; press `R` anytime for a clean restart from `_init()`).
-- **`tessera test`**: Headless test runner in Node via `wasmoon` without requiring a browser or GPU. Advances ticks deterministically with `step(N)` and asserts game state.
-- **`tessera build`**: Validates syntax, model room boundaries, and palette limits before emitting distributable artifacts.
+| Command | Description |
+|---|---|
+| `tessera init [dir]` | Scaffold a new project with `tessera.json`, `src/main.lua`, `assets/palette.txt`, and VS Code LuaLS typings. |
+| `tessera dev [path]` | Start local dev server (`http://localhost:3000`, `0.0.0.0`) with file watching and SSE live reload. Supports `--port` and `--host`. |
+| `tessera check [path]` | Assemble and validate cart sections, manifest metadata, and Lua block balance. |
+| `tessera pack [path]` | Assemble and encode a cart into a steganographic `.tess.png` picture cart (supports custom 256×256 `--label` and `-o`). |
+| `tessera unpack <png>` | Decode a `.tess.png` picture cart back into readable `.tess` text. |
+| `tessera vox <files...>` | Convert one or more MagicaVoxel `.vox` models into Tessera `__models__` / `__pal__` text with automatic palette deduplication. |
+| `tessera export [path]` | Export an offline single-file `.html` runner embedding your cart (no server required). |
+| `tessera mcp` | Start the Model Context Protocol (MCP) stdio server for AI coding agents. |
 
 ---
 
@@ -65,10 +111,10 @@ The build compiles into:
 
 ![Voxel Asset Pipeline](docs/figures/04-voxel-palette-pipeline.svg)
 
-- **MagicaVoxel / Goxel Support**: Parses binary `.vox` files, extracts multi-frame animations from sequential `nSHP` chunks, and converts models to Tessera's room coordinate space.
-- **Palette Deduplication**: Collapses duplicate `#RRGGBB` colors across all models.
-- **Strict Budgeting**: Checks that total unique colors do not exceed the 255-index limit (index 0 is reserved for transparent air). Fails with detailed per-file counts if overflow occurs.
-- **Named Palette Table**: Colors in `assets/palette.txt` are bound to constants accessible in Lua through `C.<name>`.
+- **MagicaVoxel / Goxel Support**: Parses binary `.vox` files, extracts multi-frame models, and converts them to Tessera's voxel space.
+- **Palette Deduplication**: Collapses identical `#RRGGBB` colors across all models.
+- **Strict Budgeting**: Verifies that total unique colors stay within the 255-index limit (index `0` is reserved for transparent air).
+- **Custom Palettes**: Define overrides in `assets/palette.txt` (`<index> <rrggbb>` or `<index>: #<rrggbb>`).
 
 ---
 
@@ -76,14 +122,14 @@ The build compiles into:
 
 ![Developer Scaffolding & Web Distribution](docs/figures/05-scaffolder-distribution.svg)
 
-- **Quickstart**: Create a new cart project with:
+- **Quickstart**:
   ```sh
   npm create @stephenwil/tessera my-game
   cd my-game
   npm install
   npm run dev
   ```
-- **Web Distribution**: Playable via standalone single-file `.html` on itch.io or USB, drag-and-drop `.tess.png` picture carts, or deep-linked into the hosted web console (`play.domain/?cart=...`). Private carts are strictly prevented from ever being bundled into public builds.
+- **Web Distribution**: Share standalone single-file `.html` games on itch.io or USB, post `.tess.png` picture carts on the web for drag-and-drop play, or deep-link carts into any hosted Tessera player (`?cart=https://.../game.tess`).
 
 ---
 
@@ -91,20 +137,21 @@ The build compiles into:
 
 ![Tessera High-Res Lua API Reference](docs/figures/06-api-cheat-sheet.svg)
 
-All coordinates are in voxel room space (`256×256×128`). Palette indices are `1..255` (`0` is transparent air). HUD coordinates are in `768×432` screen canvas space.
+All 3D coordinates are in voxel room space (`256×256×128`, `x` east, `y` north, `z` up). Palette indices are `1..255` (`0` is transparent air). HUD coordinates are in `768×432` screen canvas space.
 
 ### Core API Summary
 
 | Category | Functions | Notes |
 |---|---|---|
-| **Map Layer** (persists) | `mset`, `mget`, `mbox`, `mmodel`, `mheight`, `mclear` | Writes to persistent world voxel volume. Uploads modified bricks to GPU. |
-| **Draw Layer** (per-frame) | `cls`, `vset`, `vget`, `box`, `sphere`, `line3d`, `model`, `particle` | Rebuilt every frame. `cls()` zero-clears only bricks written since previous frame. |
-| **Models** | `newmodel`, `mpset`, `msize`, `mvox` | Runtime procedural voxel models (or loaded via `.vox` in `models/`). |
-| **Camera & View** | `camera`, `sun`, `sky`, `fog`, `pal`, `palt`, `pswap` | Orthographic camera basis, directional shadow rays, sky gradients, and palette remapping. |
-| **HUD & 2D Overlay** | `print`, `textw`, `rect`, `rectfill`, `circfill`, `spr2d`, `project` | Cleared every frame. Crisp 5×7 overlay font (6px advance) composited in raymarch pass. |
-| **Input** | `btn(b, [p])`, `btnp(b, [p])`, `axis(n, [p])` | Up to 4 players. Merges keyboard, gamepad, and touch controls. |
-| **Audio Synthesis** | `tone(wave, f0, [f1], dur, [vol], [ch])`, `sfx`, `mute` | 4 synth channels: `square`, `triangle`, `saw`, `noise` with frequency sliding. |
-| **Math & System**
+| **Map Layer** (persists) | `mset`, `mget`, `mbox`, `mmodel`, `mheight`, `mclear` | Persistent world volume; only modified 16³ bricks upload to GPU. |
+| **Draw Layer** (per-frame) | `cls`, `vset`, `vget`, `box`, `sphere`, `line3d`, `model`, `particle` | Rebuilt every frame; `cls()` clears only dirty draw bricks. |
+| **Models** | `newmodel`, `mpset`, `msize`, `mvox` | Runtime procedural voxel models (or imported via `.vox` in `models/`). |
+| **Spatial & Collision** | `raycast3d`, `check_box`, `sweep_box`, `sweep_down`, `vheight` | Host-side 3D DDA raycast and AABB sweeps (`layer`: `0`=both, `1`=map, `2`=draw). |
+| **Camera, Light & Quality** | `camera`, `sun`, `sky`, `fog`, `pal`, `palt`, `pswap`, `quality` | Orthographic camera `camera(x,y,z,[zoom],[yaw])`, sun shadows, sky gradient, and `"standard"`/`"hq"` presets. |
+| **HUD & 2D Overlay** | `print`, `textw`, `rect`, `rectfill`, `circfill`, `spr2d`, `project` | Cleared every frame. Crisp 5×7 font (6px advance) drawn over the raymarched scene. |
+| **Input** | `btn(b, [p])`, `btnp(b, [p])`, `axis(n, [p])` | Up to 4 players (`0..5` directional/A/B, `6`=M). Merges keyboard, gamepad, and touch. |
+| **Audio & Tracker** | `tone`, `sfx`, `mute`, `music`, `music_stop`, `music_pos`, `music_vol` | 4-channel Web Audio synth (`square`, `triangle`, `saw`, `noise`) plus `__music__` tracker playback. |
+| **Math & System** | `t()`, `flr`, `mid`, `rnd`, `noise3`, `stat`, `dset`, `dget`, `printh` | Fixed 30 Hz game time `t()`, 3D noise, persistent cart storage, and profiling. |
 
 ### Background Music & Audio Synthesis
 
@@ -127,15 +174,12 @@ function _update()
   end
 end
 ```
- | `t()`, `flr`, `mid`, `rnd`, `noise3`, `stat`, `dset`, `dget`, `printh` | Fixed 30 Hz game time `t()`, 3D value noise, cart persistence, and diagnostics. |
 
 ---
 
-## 7. Cart Distribution, Web Delivery & Tailnet Links
+## 7. Cart Distribution, Web Delivery & Tailnet Testing
 
-![Cart Distribution & Ingestion Pipeline](docs/figures/05-scaffolder-distribution.svg)
-
-Carts exist as either human-readable `.tess` text files or steganographic `.tess.png` picture carts (which hide compressed cart text in the lower 2 bits of the RGBA channels, holding up to 64 KiB).
+Carts exist as either human-readable `.tess` text files or steganographic `.tess.png` picture carts (which store deflate-compressed cart text in the low 2 bits of the RGBA channels, up to 64 KiB).
 
 ```
    [ Local Dev Server (tessera dev) ] ──────► http://localhost:3000/
@@ -145,31 +189,32 @@ Carts exist as either human-readable `.tess` text files or steganographic `.tess
                                     └───► File picker ("Load cart...")
 ```
 
-### Tailscale Remote Testing
-When running the development server or host console (`0.0.0.0`), the runtime and carts can be loaded across your private Tailnet on any connected device (desktop, laptop, tablet, mobile):
+### Local Network & Tailscale Testing
+`tessera dev` binds to `0.0.0.0:3000` by default, so you can playtest on phones, tablets, or laptops across your LAN or Tailnet:
 
-- **Console Root / Picker**: `http://<tailscale-ip>:5173/` or `http://<tailscale-ip>:3000/`
-- **Direct Cart Launch**: `http://<tailscale-ip>:5173/?cart=<cart-id>`
-- **Live In-Console Editor**: Press **F4** on any connected browser keyboard to live-edit Lua 5.4 code directly over the network with instant state-preserving hot reload.
+- **Dev Server URL**: `http://<lan-or-tailscale-ip>:3000/`
+- **Live In-Console Code Editor**: Press **F4** to edit Lua 5.4 code live in the browser; press **F5** to open the voxel model editor; press **F3** to toggle performance stats.
 
 ---
 
-## 8. Model Context Protocol (MCP) Server for AI Agents
+## 8. Building Games with AI Agents (CLI & MCP)
 
-`tessera-kit` provides a built-in Model Context Protocol (MCP) server that empowers AI coding agents (in **T3 Code**, **Claude Desktop**, **Cursor**, etc.) to create, inspect, validate, and build Tessera voxel games autonomously.
+AI coding agents can create, validate, pack, and export Tessera games in two ways:
+
+1. **Without MCP (shell / terminal agents)**: Any agent with shell access can run `npm create @stephenwil/tessera my-game`, write Lua into `src/main.lua`, validate with `npx @stephenwil/tessera check`, pack with `npx @stephenwil/tessera pack`, and export playable HTML with `npx @stephenwil/tessera export`.
+2. **With MCP (recommended for Claude Desktop, Cursor, T3 Code, and tool-only agents)**: Connect the built-in **Model Context Protocol (MCP)** server so the agent gets structured tools and live, accurate API documentation without shelling out or guessing function signatures.
 
 ### Starting the MCP Server
 
-Agents can launch the server over stdio via either:
 ```sh
-# Via the main CLI
-npx @stephenwil/tessera mcp
+# Via the main CLI package
+npx -y @stephenwil/tessera mcp
 
-# Or via the dedicated MCP package
-npx @stephenwil/tessera-mcp
+# Or via the dedicated standalone MCP package
+npx -y @stephenwil/tessera-mcp
 ```
 
-### Configuration Example (`claude_desktop_config.json` or Cursor Settings)
+### Client Configuration (`claude_desktop_config.json`, Cursor, T3 Code)
 
 ```json
 {
@@ -177,6 +222,19 @@ npx @stephenwil/tessera-mcp
     "tessera": {
       "command": "npx",
       "args": ["-y", "@stephenwil/tessera", "mcp"]
+    }
+  }
+}
+```
+
+Or using the dedicated package:
+
+```json
+{
+  "mcpServers": {
+    "tessera": {
+      "command": "npx",
+      "args": ["-y", "@stephenwil/tessera-mcp"]
     }
   }
 }
@@ -192,5 +250,5 @@ npx @stephenwil/tessera-mcp
 | `tessera_pack_cart` | `cartPath`, `outputPath`, `labelPath` | Packs `.tess` into a shareable steganographic `.tess.png` picture cart. |
 | `tessera_export_html` | `cartPath`, `outputPath` | Exports a self-contained offline single-file `.html` game runner. |
 | `tessera_inspect_vox` | `voxPath` | Inspects MagicaVoxel `.vox` dimensions, models, frame count, and color palette. |
-| `tessera_check_palette_budget` | `projectDir`, `maxColors` | Scans all models, deduplicates colors, and asserts compliance with the $\le 255$ palette limit. |
-| `tessera_api_docs` | `topic` (`all`, `map`, `draw`, `collision`, `camera`, `hud`, `input`, `audio`, `math`) | Retrieves live API documentation, method signatures, and code examples directly into context. |
+| `tessera_check_palette_budget` | `projectDir`, `maxColors` | Scans all models, deduplicates colors, and verifies compliance with the ≤ 255 palette limit. |
+| `tessera_api_docs` | `topic` (`all`, `map`, `draw`, `collision`, `camera`, `hud`, `input`, `audio`, `math`) | Retrieves live, accurate Lua API signatures and notes directly into agent context. |

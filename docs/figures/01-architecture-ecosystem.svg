@@ -55,8 +55,8 @@ text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
   </marker>
 </defs>
 
-<text x="20" y="32" class="t-h t-teal">1. Three Repositories &amp; GitHub Packages Ecosystem</text>
-<text x="20" y="52" class="t-dim t-s">Clean separation of core engine, public/private developer tooling, and game cart projects.</text>
+<text x="20" y="32" class="t-h t-teal">1. Engine, Public npm Registry &amp; Cart Ecosystem</text>
+<text x="20" y="52" class="t-dim t-s">Clean separation of core engine, public npm developer tooling (CLI + MCP), and game cart projects.</text>
 
 <!-- tessera-high-res -->
 <rect x="30" y="80" width="270" height="200" rx="8" class="soft-teal"/>
@@ -72,32 +72,32 @@ text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
 <!-- tessera-kit -->
 <rect x="365" y="80" width="270" height="200" rx="8" class="soft-sky"/>
 <text x="385" y="108" class="t-b t-l">stephenwil/tessera-kit</text>
-<text x="385" y="128" class="t-dim t-s">• @stephenwil/tessera CLI</text>
-<text x="385" y="146" class="t-dim t-s">• .vox parser &amp; palette merger</text>
-<text x="385" y="164" class="t-dim t-s">• Live dev server + hot reload</text>
-<text x="385" y="182" class="t-dim t-s">• Standalone singlefile exporter</text>
+<text x="385" y="128" class="t-dim t-s">• @stephenwil/tessera (CLI + Dev)</text>
+<text x="385" y="146" class="t-dim t-s">• @stephenwil/tessera-mcp (AI MCP)</text>
+<text x="385" y="164" class="t-dim t-s">• .vox parser &amp; palette merger</text>
+<text x="385" y="182" class="t-dim t-s">• Offline HTML &amp; .tess.png export</text>
 <rect x="385" y="210" width="230" height="50" rx="6" class="k-box"/>
 <text x="500" y="232" class="t-b" text-anchor="middle">@stephenwil/create-tessera</text>
 <text x="500" y="248" class="t-dim t-s" text-anchor="middle">Starter template scaffolder</text>
 
-<!-- tessera-hatchase -->
+<!-- cart-project -->
 <rect x="700" y="80" width="270" height="200" rx="8" class="soft-amber"/>
-<text x="720" y="108" class="t-b t-l">stephenwil/tessera-hatchase</text>
-<text x="720" y="128" class="t-dim t-s">• Private Game Cart project</text>
-<text x="720" y="146" class="t-dim t-s">• models/ (three.js → .vox)</text>
-<text x="720" y="164" class="t-dim t-s">• src/ (Lua game &amp; world code)</text>
-<text x="720" y="182" class="t-dim t-s">• Rules &amp; gameplay test suite</text>
+<text x="720" y="108" class="t-b t-l">Your Cart Project (my-game/)</text>
+<text x="720" y="128" class="t-dim t-s">• Created via npm create</text>
+<text x="720" y="146" class="t-dim t-s">• models/ (MagicaVoxel .vox)</text>
+<text x="720" y="164" class="t-dim t-s">• src/main.lua &amp; tessera.json</text>
+<text x="720" y="182" class="t-dim t-s">• npm run dev / pack / build</text>
 <rect x="720" y="210" width="230" height="50" rx="6" class="k-box"/>
 <text x="835" y="232" class="t-b" text-anchor="middle">Built Cart Artifacts</text>
-<text x="835" y="248" class="t-dim t-s" text-anchor="middle">hatchase.tess &amp; hatchase.tess.png</text>
+<text x="835" y="248" class="t-dim t-s" text-anchor="middle">dist/my-game.tess.png &amp; .html</text>
 
 <!-- Connections -->
 <line x1="300" y1="235" x2="363" y2="235" class="k-line" marker-end="url(#ar-teal)"/>
-<text x="332" y="224" class="t-dim t-s" text-anchor="middle">submodule /</text>
-<text x="332" y="246" class="t-dim t-s" text-anchor="middle">bundled core</text>
+<text x="332" y="224" class="t-dim t-s" text-anchor="middle">bundled</text>
+<text x="332" y="246" class="t-dim t-s" text-anchor="middle">runner.html</text>
 
 <line x1="635" y1="180" x2="698" y2="180" class="k-line" marker-end="url(#ar-sky)"/>
-<text x="667" y="170" class="t-dim t-s" text-anchor="middle">npm install</text>
+<text x="667" y="170" class="t-dim t-s" text-anchor="middle">public npm</text>
 <text x="667" y="194" class="t-dim t-s" text-anchor="middle">@stephenwil/*</text>
 
 </svg>

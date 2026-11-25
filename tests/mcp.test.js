@@ -15,6 +15,10 @@ test('MCP Tool Handlers: docs, init, check, assemble, pack', async (t) => {
   assert.ok(docResult.text.includes('raycast3d'), 'Should contain raycast3d in collision docs');
   assert.ok(docResult.text.includes('check_box'), 'Should contain check_box');
 
+  const camDoc = await handleToolCall('tessera_api_docs', { topic: 'camera' });
+  assert.ok(camDoc.text.includes('camera(x, y, z'), 'Camera docs should document real camera() API');
+  assert.equal(camDoc.text.includes('camtarget'), false, 'Camera docs must not list nonexistent camtarget');
+
   // 2. Project init tool
   const gameDir = path.join(tmpDir, 'test-game');
   const initResult = await handleToolCall('tessera_init_cart', {

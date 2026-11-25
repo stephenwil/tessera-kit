@@ -10,63 +10,78 @@ import { checkCartCli } from './check.js';
 import { parseVox, convertMultiVox } from './cart/vox.js';
 
 const API_DOCS = {
-  map: `Map Layer API (persistent world volume):
-- mset(x, y, z, c): Set persistent voxel at (x, y, z) with color index c (1..255, 0=empty)
-- mget(x, y, z): Get persistent voxel color index at (x, y, z)
-- mbox(x0, y0, z0, x1, y1, z1, c, [hollow]): Draw filled or hollow box in persistent volume
-- mmodel(id, x, y, z, [rot], [flip], [frame]): Stamp a 3D model into persistent volume
-- mheight(x, y): Returns highest non-empty voxel z-coordinate at (x, y)
-- mclear(): Reset entire persistent map layer to air`,
+  map: `Map Layer API (persistent 256x256x128 world volume):
+- mset(x, y, z, c): Set persistent voxel at (x, y, z) with palette index c (1..255, 0=empty)
+- mget(x, y, z): Get persistent voxel palette index at (x, y, z) (0 outside bounds)
+- mbox(x0, y0, z0, x1, y1, z1, c): Draw solid filled box in persistent map volume
+- mmodel(id, x, y, z, [rot], [flip]): Stamp a 3D model into persistent map volume
+- mheight(x, y): Returns highest non-empty map voxel z-coordinate at (x, y) (or -1)
+- mclear([c]): Clear/fill entire persistent map layer (default 0 = air)`,
 
-  draw: `Draw Layer API (transient dynamic volume, wiped every frame by cls()):
-- vset(x, y, z, c): Set dynamic voxel at (x, y, z)
-- vget(x, y, z): Read dynamic voxel, falls back to map layer if empty
+  draw: `Draw Layer API (transient per-frame volume, cleared by cls()):
+- cls(): Clear all voxels written to the draw layer since previous frame
+- vset(x, y, z, c): Set dynamic voxel at (x, y, z) (honors pswap remap)
+- vget(x, y, z): Read dynamic voxel, falling back to map layer if empty
 - box(x0, y0, z0, x1, y1, z1, c, [hollow]): Draw dynamic filled or hollow 3D box
-- sphere(x, y, z, r, c): Draw solid voxel sphere (radius r)
-- line3d(x0, y0, z0, x1, y1, z1, c): Draw 3D Bresenham line
-- model(id, x, y, z, [rot], [flip], [frame]): Draw animated model instance
-- particle(x, y, z, c, [life]): Spawn transient voxel particle
-- cls([c]): Clear dynamic layer (optional fill color c, default 0)`,
+- sphere(x, y, z, r, c): Draw solid voxel sphere of radius r
+- line3d(x0, y0, z0, x1, y1, z1, c): Draw 3D Bresenham voxel line
+- model(id, x, y, z, [rot], [flip], [frame]): Draw animated voxel model instance
+- particle(x, y, z, c, [life]): Spawn transient voxel particle (default life 1.0)
+- newmodel(id, w, d, h, [frames]): Define a runtime procedural model (w,d <= 256; h <= 128)
+- mpset(id, x, y, z, c, [frame]): Set a voxel inside a model
+- msize(id): Returns model dimensions (w, d, h)
+- mvox(id, [frame]): Returns array of {x, y, z, c} voxels in model`,
 
-  collision: `Host-Side Voxel Collision Probes (ultra-fast zero-bridge queries):
-- raycast3d(x0, y0, z0, dx, dy, dz, max_dist): Cast 3D ray through volume. Returns hit (bool), hit_x, hit_y, hit_z, normal_x, normal_y, normal_z, color
-- check_box(x0, y0, z0, x1, y1, z1): Check if any solid voxel exists in bounding box. Returns bool
-- sweep_box(x0, y0, z0, x1, y1, z1, dx, dy, dz): Sweep 3D AABB along direction. Returns fraction (0..1), hit (bool), nx, ny, nz
-- sweep_down(x, y, z, max_drop): Fast downward ray test for gravity. Returns ground_z, hit (bool)
-- vheight(x, y): Returns highest voxel across both draw and map layers at (x, y)`,
+  collision: `Host-Side Voxel Collision Probes (layer: 0=both [default], 1=map, 2=draw):
+- raycast3d(x0, y0, z0, dx, dy, dz, [max_dist], [layer]): 3D DDA raycast. Returns hit, x, y, z, nx, ny, nz, c, dist
+- check_box(x0, y0, z0, x1, y1, z1, [layer]): AABB solid voxel test. Returns collides, x, y, z, c
+- sweep_box(x0, y0, z0, x1, y1, z1, dx, dy, dz, [max_dist], [layer]): Continuous AABB sweep. Returns hit, dist, x, y, z, nx, ny, nz, c
+- sweep_down(x, y, z, [w], [d], [max_drop], [layer]): Footprint downward sweep. Returns hit, ground_z, dist, x, y, z, c
+- vheight(x, y, [w], [d], [layer]): Highest solid voxel z across footprint (or -1)`,
 
-  camera: `Camera & Rendering API:
-- cam(x, y, z, [zoom], [pitch], [yaw]): Position camera in world coordinates
-- camtarget(tx, ty, tz): Set camera look-at target point
-- camfov(degrees): Set camera field-of-view angle (default 60)
-- fog(color, density): Set distance fog color and density (0..1)
-- pal(idx, r, g, b): Dynamically modify color in the 256-color palette
-- palt(): Reset palette overrides back to cart palette
-- pswap(from_c, to_c): Remap color index dynamically during drawing`,
+  camera: `Camera, Lighting, Palette & Quality API:
+- camera(x, y, z, [zoom], [yaw]): Set orthographic camera target (x, y, z), zoom (>0, default 1), and yaw in radians (default 0)
+- sun(dx, dy, dz, [strength]): Set directional sun vector and shadow strength (default 1)
+- sky(top, bottom): Set sky gradient using two palette indices
+- fog(c, density): Set distance fog palette index and density (0 disables)
+- pal(i, r, g, b): Dynamically modify RGB (0..255) for palette slot i (0..255)
+- palt(): Reset runtime palette overrides back to cart palette
+- pswap([a], [b]): Remap draw color a -> b (call with no args to reset all remaps)
+- quality([preset]): Get or set render quality ("standard" or "hq")`,
 
-  hud: `2D HUD Overlay Canvas (768x432 screen resolution):
-- print(str, x, y, [c], [outline_c], [scale]): Draw 5x7 bitmap text (6px char advance)
-- textw(str): Measure pixel width of text string (6 * string.len)
+  hud: `2D HUD Overlay Canvas (768x432 screen resolution, cleared every frame):
+- print(str, x, y, [c], [outline], [scale]): Draw 5x7 bitmap text (6px advance, outline defaults true)
+- textw(str): Measure pixel width of text string (6 * len)
 - rect(x0, y0, x1, y1, [c]): Draw outline rectangle
 - rectfill(x0, y0, x1, y1, [c]): Draw solid filled rectangle
 - circfill(x, y, r, [c]): Draw solid circle
 - spr2d(n, x, y, [scale]): Stamp built-in 8x8 HUD icon
-- project(x, y, z): Project 3D world voxel coordinate to 2D screen coordinate (sx, sy, visible)`,
+- project(x, y, z): Project 3D voxel coordinate to 2D screen (sx, sy, visible)`,
 
-  input: `Input API (Keyboard & Multi-player Gamepad):
-- btn(i, [player]): Is button currently held down? (0=Left, 1=Right, 2=Up, 3=Down, 4=A/Z, 5=B/X, 6=Start/Enter)
-- btnp(i, [player]): Was button pressed this tick? (Edge-triggered with repeat delay)`,
+  input: `Input API (Keyboard, 4-Player Gamepad & Touch):
+- btn(b, [player]): Is button held? (0=Left, 1=Right, 2=Up/+y, 3=Down/-y, 4=A/Z/Space, 5=B/X/E, 6=M sound key)
+- btnp(b, [player]): Was button pressed this tick? (Edge-triggered)
+- axis(n, [player]): Analog stick / pad axis in -1..1 (0=x, 1=y)`,
 
-  audio: `Audio Synthesizer (4-channel chip synth):
-- sfx(id, [channel], [offset]): Play sound effect id (0..63)
-- music(id, [fade_ms]): Play music track / tracker sequence`,
+  audio: `Audio Synthesizer & Music Tracker (4 concurrent channels 0..3):
+- tone(wave, f0, [f1], dur, [vol], [ch]): Synthesize tone (wave: "square", "triangle", "saw", "noise"; f1 slides pitch)
+- sfx(n, [ch]): Trigger sound effect n from cart __sfx__ section
+- mute(): Toggle console sound mute; returns current muted state
+- music(id, [fade_ms], [ch_mask]): Start music track from cart __music__ section
+- music_stop([fade_ms]): Stop active music track
+- music_pos(): Returns current (pattern, row) or (-1, -1) if stopped
+- music_vol([v]): Get or set music volume (0..1)`,
 
-  math: `Math Utilities:
-- t(): Seconds elapsed since boot (advances 1/30s per tick)
+  math: `Math, Time, Persistence & Diagnostics API:
+- t(): Seconds elapsed since boot (advances 1/30s per fixed update tick)
 - flr(x): Floor number to integer
-- mid(min, val, max): Clamp value between min and max
-- rnd(n): Random float 0 <= r < n (or random int if n is integer)
-- noise3(x, y, z): 3D Perlin noise generator (-1.0 to 1.0)`
+- mid(a, b, c): Returns middle (clamped) value of three numbers
+- rnd([n]): Random float 0 <= r < n (default n=1)
+- noise3(x, y, z): 3D value noise (-1.0 to 1.0)
+- stat(n): Diagnostics (0=fps, 1=updateMs, 2=drawMs, 3=compositeMs, 4=lastInputSource)
+- dset(key, val): Save numeric value to cart storage
+- dget(key): Read numeric value from cart storage (0 if unset)
+- printh(str): Log debug string to host console`
 };
 
 const TOOLS = [
@@ -306,7 +321,7 @@ export function startMcpServer() {
           capabilities: { tools: {} },
           serverInfo: {
             name: '@stephenwil/tessera-mcp',
-            version: '0.1.0'
+            version: '0.1.3'
           }
         }
       });

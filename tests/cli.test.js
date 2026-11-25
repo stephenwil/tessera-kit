@@ -70,3 +70,26 @@ test('scaffolder and project assembly round-trip', async (t) => {
   // Cleanup
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
+
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+test('create-tessera CLI generates valid Tessera API calls', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tessera-create-test-'));
+  const projectDir = path.join(tmpDir, 'starter-game');
+  const binPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../packages/create-tessera/bin/create-tessera.mjs');
+
+  execFileSync(process.execPath, [binPath, projectDir]);
+
+  const mainLua = fs.readFileSync(path.join(projectDir, 'src/main.lua'), 'utf8');
+  assert.ok(mainLua.includes('camera('), 'Starter Lua should use real camera() API');
+  assert.equal(/\bcam\s*\(/.test(mainLua), false, 'Starter Lua must not call nonexistent cam()');
+  assert.equal(/\bcamtarget\s*\(/.test(mainLua), false, 'Starter Lua must not call nonexistent camtarget()');
+
+  const cartText = assembleProject(projectDir);
+  const checkRes = checkCartCli(projectDir);
+  assert.equal(checkRes.ok, true, 'Generated starter project must pass tessera check');
+  assert.ok(cartText.includes('camera('), 'Assembled cart must include camera() call');
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
