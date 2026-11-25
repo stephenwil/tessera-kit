@@ -4,7 +4,7 @@
 
 # Tessera Kit
 
-[![Listed on AlsoBuilt](https://img.shields.io/badge/AlsoBuilt-listed-6366f1?style=flat-square)](https://alsobuilt.pages.dev/)
+[![Listed on AlsoBuilt](https://img.shields.io/badge/AlsoBuilt-listed-6366f1?style=flat-square)](https://alsobuilt.pages.dev/?cat=gamedev-retro)
 
 Developer tools, CLI, MagicaVoxel pipeline, project scaffolder, and Model Context Protocol (MCP) server for the **Tessera High-Res** voxel fantasy console (`256×256×128` voxel volume, `768×432` WebGL2 raymarcher, Lua 5.4).
 
