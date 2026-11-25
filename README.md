@@ -151,3 +151,46 @@ When running the development server or host console (`0.0.0.0`), the runtime and
 - **Console Root / Picker**: `http://<tailscale-ip>:5173/` or `http://<tailscale-ip>:3000/`
 - **Direct Cart Launch**: `http://<tailscale-ip>:5173/?cart=<cart-id>`
 - **Live In-Console Editor**: Press **F4** on any connected browser keyboard to live-edit Lua 5.4 code directly over the network with instant state-preserving hot reload.
+
+---
+
+## 8. Model Context Protocol (MCP) Server for AI Agents
+
+`tessera-kit` provides a built-in Model Context Protocol (MCP) server that empowers AI coding agents (in **T3 Code**, **Claude Desktop**, **Cursor**, etc.) to create, inspect, validate, and build Tessera voxel games autonomously.
+
+### Starting the MCP Server
+
+Agents can launch the server over stdio via either:
+```sh
+# Via the main CLI
+npx @stephenwil/tessera mcp
+
+# Or via the dedicated MCP package
+npx @stephenwil/tessera-mcp
+```
+
+### Configuration Example (`claude_desktop_config.json` or Cursor Settings)
+
+```json
+{
+  "mcpServers": {
+    "tessera": {
+      "command": "npx",
+      "args": ["-y", "@stephenwil/tessera", "mcp"]
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `tessera_init_cart` | `directory`, `name`, `title`, `author` | Scaffolds a new cart project with manifest, starter loop, palette, and VS Code typings. |
+| `tessera_check_cart` | `path` | Fast validation of cart structure, balanced Lua blocks, and manifest schema. |
+| `tessera_assemble_cart` | `projectDir` | Assembles multi-file Lua scripts and models into a `.tess` cart. |
+| `tessera_pack_cart` | `cartPath`, `outputPath`, `labelPath` | Packs `.tess` into a shareable steganographic `.tess.png` picture cart. |
+| `tessera_export_html` | `cartPath`, `outputPath` | Exports a self-contained offline single-file `.html` game runner. |
+| `tessera_inspect_vox` | `voxPath` | Inspects MagicaVoxel `.vox` dimensions, models, frame count, and color palette. |
+| `tessera_check_palette_budget` | `projectDir`, `maxColors` | Scans all models, deduplicates colors, and asserts compliance with the $\le 255$ palette limit. |
+| `tessera_api_docs` | `topic` (`all`, `map`, `draw`, `collision`, `camera`, `hud`, `input`, `audio`, `math`) | Retrieves live API documentation, method signatures, and code examples directly into context. |

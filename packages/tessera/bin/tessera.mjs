@@ -9,6 +9,7 @@ import { importVoxCli } from '../src/vox.js';
 import { exportHtmlCli } from '../src/export.js';
 import { checkCartCli } from '../src/check.js';
 import { startDevCli } from '../src/dev.js';
+import { startMcpServer } from '../src/mcp.js';
 
 const HELP = `
 Tessera CLI: Developer tools for the Tessera High-Res Voxel Fantasy Console
@@ -21,6 +22,7 @@ Usage:
   tessera vox <file.vox...>       Convert MagicaVoxel .vox model(s) to Tessera format
   tessera export <cart>           Export offline standalone single-file .html runner
   tessera check <cart>            Validate cart syntax and run headless frame tests
+  tessera mcp                     Start Model Context Protocol (MCP) server over stdio
 
 Options:
   -o, --out <path>                Specify output file path
@@ -194,6 +196,11 @@ async function main() {
           for (const err of res.errors) console.error(`  - ${err}`);
           process.exit(1);
         }
+        break;
+      }
+
+      case 'mcp': {
+        startMcpServer();
         break;
       }
 

@@ -1,0 +1,29 @@
+{
+  "name": "@stephenwil/tessera-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol (MCP) server for the Tessera High-Res voxel fantasy console",
+  "type": "module",
+  "bin": {
+    "tessera-mcp": "bin/tessera-mcp.mjs"
+  },
+  "files": [
+    "bin"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "tessera",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "agents",
+    "voxel",
+    "fantasy-console"
+  ],
+  "author": "Stephen Wilson",
+  "license": "MIT",
+  "dependencies": {
+    "@stephenwil/tessera": "^0.1.1"
+  }
+}
