@@ -1,10 +1,10 @@
 {
   "name": "@stephenwil/create-tessera",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Create a new Tessera High-Res voxel fantasy console cart project",
   "type": "module",
   "bin": {
-    "create-tessera": "./bin/create-tessera.mjs"
+    "create-tessera": "bin/create-tessera.mjs"
   },
   "files": [
     "bin",

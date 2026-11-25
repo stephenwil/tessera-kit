@@ -1,10 +1,10 @@
 {
   "name": "@stephenwil/tessera",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Developer CLI and tooling for the Tessera High-Res voxel fantasy console",
   "type": "module",
   "bin": {
-    "tessera": "./bin/tessera.mjs"
+    "tessera": "bin/tessera.mjs"
   },
   "main": "./src/index.js",
   "files": [
