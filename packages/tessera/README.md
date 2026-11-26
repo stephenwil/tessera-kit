@@ -26,7 +26,7 @@ npx @stephenwil/tessera@latest pull <id> [--project [dir]]     # Download .tess,
 npx @stephenwil/tessera@latest dev [path]                      # Live-reload dev server (--port, --host)
 npx @stephenwil/tessera@latest check [path] [--runtime]        # Validate syntax (+ headless WebGL2 boot)
 npx @stephenwil/tessera@latest preview [path] [-o shot.png]    # Render 768x432 headless PNG screenshot
-npx @stephenwil/tessera@latest pack [path]                     # Build .tess & steganographic .tess.png
+npx @stephenwil/tessera@latest pack [path] [--auto-label]      # Build .tess & .tess.png (with live cover art)
 npx @stephenwil/tessera@latest unpack <cart.tess.png>          # Unpack picture cart to plain text
 npx @stephenwil/tessera@latest vox <files...>                  # Convert MagicaVoxel .vox models
 npx @stephenwil/tessera@latest export [path]                   # Export self-contained offline .html

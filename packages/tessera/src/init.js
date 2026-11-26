@@ -10,7 +10,7 @@ const STARTER_LUA = `-- Tessera Starter Cart
 function _init()
   -- Set up isometric camera and directional sun
   camera(128, 128, 16, 1, 0.785)
-  sun(1, 1, 1, 15)
+  sun(-0.4, -0.6, 0.7, 1)
   sky(1, 2)
   t_prev = 0
 end

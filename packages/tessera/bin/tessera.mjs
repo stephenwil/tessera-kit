@@ -32,7 +32,7 @@ Usage:
   tessera samples                 List playable sample carts from the Tessera Showcase
   tessera pull <id> [target]      Download a showcase sample cart (.tess, --png, or --project)
   tessera dev [path]              Start local development server with hot-reload
-  tessera pack <cart> [label]     Pack .tess cart into a .tess.png picture cart
+  tessera pack <cart> [label]     Pack .tess cart into a .tess.png picture cart (--auto-label)
   tessera unpack <picture-cart>   Extract .tess text from a .tess.png picture cart
   tessera vox <file.vox...>       Convert MagicaVoxel .vox model(s) to Tessera format
   tessera export <cart>           Export offline standalone single-file .html runner
@@ -52,6 +52,7 @@ Options:
   --frames <number>               Frames to step before preview screenshot (default: 4)
   --keys <spec>                   Scripted inputs for preview/check (e.g. "ArrowRight:8,Space:3")
   --quality <standard|hq>         Override render quality for preview
+  --auto-label                    Render headless cover art automatically during pack
   --registry <url>                Override showcase catalog base URL
   --name <name>                   Specify cart / model identifier
   --pivot <x,y,z>                 Specify model pivot point
@@ -233,9 +234,16 @@ async function main() {
         }
         const labelPath = positional[1] || getOption('--label');
         const outPath = getOption('--out', '-o');
-        const res = await packCartCli(cartPath, labelPath, outPath);
-        console.log(`✓ Packed picture cart: ${res.outputPath}`);
+        const autoLabel = Boolean(getOption('--auto-label'));
+        const res = await packCartCli(cartPath, labelPath, outPath, {
+          autoLabel,
+          frames: getOption('--frames') ? Number(getOption('--frames')) : 5,
+          keys: getOption('--keys'),
+          quality: getOption('--quality'),
+        });
+        console.log(`✓ Packed picture cart: ${res.outputPath} (label: ${res.labelSource})`);
         console.log(`  File size: ${Math.ceil(res.fileSize / 1024)} KiB (Capacity: ${Math.ceil(res.capacity / 1024)} KiB)`);
+        if (res.labelWarning) console.warn(`  ⚠ ${res.labelWarning}`);
         break;
       }
 

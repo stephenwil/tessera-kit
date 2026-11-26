@@ -1,6 +1,6 @@
 {
   "name": "@stephenwil/tessera",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Developer CLI and tooling for the Tessera High-Res voxel fantasy console",
   "type": "module",
   "bin": {

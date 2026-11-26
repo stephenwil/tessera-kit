@@ -101,7 +101,7 @@ Running `npm run pack` / `npm run build` (or zero-argument `tessera pack` / `tes
 | `tessera init [dir]` | Scaffold a new project with `tessera.json`, `src/main.lua`, `assets/palette.txt`, and VS Code LuaLS typings. |
 | `tessera dev [path]` | Start local dev server (`http://localhost:3000`, `0.0.0.0`) with file watching and SSE live reload. Supports `--port` and `--host`. |
 | `tessera check [path]` | Assemble and validate cart sections, manifest metadata, and Lua block balance. |
-| `tessera pack [path]` | Assemble and encode a cart into a steganographic `.tess.png` picture cart (supports custom 256×256 `--label` and `-o`). |
+| `tessera pack [path]` | Assemble and encode a cart into a steganographic `.tess.png` picture cart (supports `--auto-label` live cover art, `--label`, and `-o`). |
 | `tessera unpack <png>` | Decode a `.tess.png` picture cart back into readable `.tess` text. |
 | `tessera vox <files...>` | Convert one or more MagicaVoxel `.vox` models into Tessera `__models__` / `__pal__` text with automatic palette deduplication. |
 | `tessera export [path]` | Export an offline single-file `.html` runner embedding your cart (no server required). |
@@ -273,7 +273,7 @@ Or using the dedicated package:
 | `tessera_check_cart` | `path`, `runtime`, `frames`, `keys` | Validates manifest, Lua blocks, API typos, and optional headless WebGL2 runtime boot (`runtime: true`). |
 | `tessera_render_preview` | `path`, `frames`, `keys`, `quality`, `outputPath` | Boots the cart in headless WebGL2 Chromium, runs optional key inputs, and returns a native 768×432 PNG screenshot image so multimodal agents can visually inspect and iterate on their game. |
 | `tessera_assemble_cart` | `projectDir` | Assembles multi-file Lua scripts, models, palette, SFX, and tracker music into a `.tess` cart. |
-| `tessera_pack_cart` | `cartPath`, `outputPath`, `labelPath` | Packs `.tess` into a shareable steganographic `.tess.png` picture cart. |
+| `tessera_pack_cart` | `path`, `autoLabel`, `labelPath`, `outputPath` | Packs `.tess` into a shareable 256×256 `.tess.png` picture cart (`autoLabel: true` renders live voxel cover art). |
 | `tessera_export_html` | `cartPath`, `outputPath` | Exports a self-contained offline single-file `.html` game runner. |
 | `tessera_inspect_vox` | `voxPath` | Inspects MagicaVoxel `.vox` dimensions, models, frame count, and color palette. |
 | `tessera_check_palette_budget` | `projectDir`, `maxColors` | Scans `.vox` models, deduplicates colors, and verifies compliance with the ≤ 255 palette limit. |

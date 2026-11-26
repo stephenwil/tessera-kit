@@ -26,7 +26,7 @@ Add to your MCP client configuration (`claude_desktop_config.json`, Cursor MCP s
 - `tessera_check_cart` — Validate manifest, Lua block balance, API typos, and optional headless WebGL2 `runtime: true` boot check
 - `tessera_render_preview` — Boot the cart in headless WebGL2 Chromium, step frames & optional scripted `keys`, and return a native 768×432 PNG screenshot image for visual agent iteration
 - `tessera_assemble_cart` — Assemble `tessera.json` + Lua + models + audio into `.tess`
-- `tessera_pack_cart` — Pack into a steganographic 256×256 `.tess.png` picture cart
+- `tessera_pack_cart` — Pack into a steganographic 256×256 `.tess.png` picture cart (`autoLabel: true` renders live cover art)
 - `tessera_export_html` — Export a standalone offline single-file `.html` game
 - `tessera_inspect_vox` — Inspect MagicaVoxel `.vox` model dimensions and palette
 - `tessera_check_palette_budget` — Verify multi-model palette stays within the ≤ 255 color limit

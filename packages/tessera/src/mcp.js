@@ -55,7 +55,7 @@ const API_DOCS = {
 
   camera: `Camera, Lighting, Palette & Quality API:
 - camera(x, y, z, [zoom], [yaw]): Set orthographic camera target (x, y, z), zoom (>0, default 1), and yaw in radians (default 0)
-- sun(dx, dy, dz, [strength]): Set directional sun vector and shadow strength (default 1)
+- sun(dx, dy, dz, [strength]): Set directional sun vector and shadow strength (typical range 0..1.5, default 1)
 - sky(top, bottom): Set sky gradient using two palette indices
 - fog(c, density): Set distance fog palette index and density (0 disables)
 - pal(i, r, g, b): Dynamically modify RGB (0..255) for palette slot i (1..255)
@@ -75,7 +75,10 @@ const API_DOCS = {
   input: `Input API (Keyboard, 4-Player Gamepad & Touch):
 - btn(b, [player]): Is button held? (0=Left, 1=Right, 2=Up/+y, 3=Down/-y, 4=A/Z/Space, 5=B/X/E, 6=M sound key)
 - btnp(b, [player]): Was button pressed this tick? (Edge-triggered)
-- axis(n, [player]): Analog stick / pad axis in -1..1 (0=x, 1=y)`,
+- axis(n, [player]): Analog stick / pad axis in -1..1:
+  - axis(0): -1 = Left (btn 0), +1 = Right (btn 1)
+  - axis(1): +1 = Up (btn 2), -1 = Down (btn 3)
+  - Note: Keyboard Arrows/WASD drive BOTH btn(0..3) and axis(0..1) automatically.`,
 
   audio: `Audio Synthesizer & Music Tracker (4 concurrent channels 0..3):
 - tone(wave, f0, [f1], dur, [vol], [ch]): Synthesize tone (wave: "square", "triangle", "saw", "noise"; f1 slides pitch)
@@ -175,15 +178,15 @@ const TOOLS = [
   },
   {
     name: 'tessera_render_preview',
-    description: 'Boot a Tessera cart in headless WebGL2 Chromium, step frames and optional scripted key inputs, verify zero Lua/console errors, and return a rendered 768x432 PNG screenshot image so you can visually inspect and iterate on your game.',
+    description: 'Boot a Tessera cart in headless WebGL2 Chromium (at speed=4, so each rendered frame advances ~4 simulation ticks / ~0.13s of game time), step initial settle frames followed by optional scripted key inputs, verify zero Lua/console errors, and return a rendered 768x432 PNG screenshot image.',
     inputSchema: {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'Path to a .tess file or a project directory containing tessera.json (defaults to ".").' },
-        frames: { type: 'number', description: 'Frames to render before capturing screenshot (default: 4).' },
-        keys: { type: 'string', description: 'Optional comma-separated key inputs to send after initial frames, e.g. "ArrowRight:12,Space:4".' },
+        frames: { type: 'number', description: 'Initial settle frames to render before sending keys or capturing screenshot (default: 4; ~0.13s game time per frame at speed=4).' },
+        keys: { type: 'string', description: 'Optional comma-separated key inputs run after initial frames, e.g. "Space:2,ArrowRight:6" (each step holds the key for N rendered frames at ~4 sim ticks/frame, followed by 1 settle frame).' },
         quality: { type: 'string', enum: ['standard', 'hq'], description: 'Optional render quality override ("standard" or "hq").' },
-        outputPath: { type: 'string', description: 'Optional path to save the rendered PNG screenshot to disk.' }
+        outputPath: { type: 'string', description: 'Optional path to save the rendered PNG screenshot to disk (alias: output).' }
       }
     }
   },
@@ -193,19 +196,25 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        projectDir: { type: 'string', description: 'Path to project directory containing tessera.json (defaults to ".").' }
+        path: { type: 'string', description: 'Path to project directory containing tessera.json (aliases: projectDir, directory; defaults to ".").' },
+        projectDir: { type: 'string', description: 'Alias for path.' }
       }
     }
   },
   {
     name: 'tessera_pack_cart',
-    description: 'Pack a cart into a shareable steganographic .tess.png picture cart with an embedded label.',
+    description: 'Pack a cart into a shareable 256x256 steganographic .tess.png picture cart with an official Tessera cartridge label. Pass autoLabel: true to automatically render live voxel cover art, or pass any screenshot PNG (e.g. 768x432) or custom 256x256 PNG via labelPath.',
     inputSchema: {
       type: 'object',
       properties: {
-        cartPath: { type: 'string', description: 'Path to .tess file or project directory (defaults to ".").' },
-        labelPath: { type: 'string', description: 'Optional 256x256 custom PNG label image.' },
-        outputPath: { type: 'string', description: 'Optional output .tess.png file path.' }
+        path: { type: 'string', description: 'Path to .tess file or project directory (aliases: cartPath, projectDir, directory; defaults to ".").' },
+        cartPath: { type: 'string', description: 'Alias for path.' },
+        autoLabel: { type: 'boolean', description: 'If true (and labelPath is omitted), automatically render a headless preview frame and frame it into the official 256x256 Tessera cartridge label.' },
+        frames: { type: 'number', description: 'Frames to render before capturing autoLabel cover art (default: 5).' },
+        keys: { type: 'string', description: 'Optional scripted key inputs before capturing autoLabel cover art.' },
+        quality: { type: 'string', enum: ['standard', 'hq'], description: 'Optional render quality override for autoLabel.' },
+        labelPath: { type: 'string', description: 'Optional PNG cover image (256x256 used verbatim; other sizes like 768x432 are framed into the official Tessera label).' },
+        outputPath: { type: 'string', description: 'Optional output .tess.png file path (alias: output).' }
       }
     }
   },
@@ -215,8 +224,9 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        cartPath: { type: 'string', description: 'Path to .tess file or project directory (defaults to ".").' },
-        outputPath: { type: 'string', description: 'Optional output .html file path.' }
+        path: { type: 'string', description: 'Path to .tess file or project directory (aliases: cartPath, projectDir, directory; defaults to ".").' },
+        cartPath: { type: 'string', description: 'Alias for path.' },
+        outputPath: { type: 'string', description: 'Optional output .html file path (alias: output).' }
       }
     }
   },
@@ -307,7 +317,7 @@ export function getPromptResult(name, args = {}) {
                 '4. Author a rich cohesive palette (`assets/palette.txt`), persistent 3D voxel environment (`_init`), responsive gameplay loop (`_update` at 30Hz), dynamic voxels + crisp HUD (`_draw`), and optional SFX/music (`assets/sfx.txt`, `assets/music.txt`). Enable `quality("hq")` for soft shadows & AO when appropriate.',
                 '5. Call `tessera_render_preview` to boot the game in headless WebGL2 and visually inspect the rendered PNG screenshot. Also test gameplay inputs with `keys` (e.g. `"ArrowRight:12,Space:4"`).',
                 '6. Critique your own screenshot (camera framing, silhouette readability, lighting contrast, HUD layout), refine the code, and re-run `tessera_render_preview` until it looks great with zero errors.',
-                '7. Finish by calling `tessera_pack_cart` (emits `.tess` + `.tess.png`) and `tessera_export_html` (emits standalone playable `.html`).'
+                '7. Finish by calling `tessera_pack_cart` with `autoLabel: true` (emits `.tess` + collector-grade `.tess.png` with live voxel cover art) and `tessera_export_html` (emits standalone playable `.html`).'
               ].join('\n')
             }
           }
@@ -334,7 +344,7 @@ export function getPromptResult(name, args = {}) {
                 '2. Call `tessera_render_preview` on the pulled project to see the baseline game.',
                 '3. Read `src/main.lua`, `assets/palette.txt`, and `tessera.json`, then implement the remix (update title/id/palette/mechanics/visuals).',
                 '4. Call `tessera_render_preview` (with gameplay `keys`) to visually verify zero runtime errors and crisp framing.',
-                '5. Package with `tessera_pack_cart` and `tessera_export_html`.'
+                '5. Package with `tessera_pack_cart` (`autoLabel: true`) and `tessera_export_html`.'
               ].join('\n')
             }
           }
@@ -369,19 +379,24 @@ export function getPromptResult(name, args = {}) {
   }
 }
 
+function resolvePathArg(args, fallback = '.') {
+  return args.path || args.directory || args.dir || args.projectDir || args.cartPath || args.input || fallback;
+}
+
 export async function handleToolCall(name, args = {}) {
   switch (name) {
     case 'tessera_init_cart': {
+      const targetDir = resolvePathArg(args, '.');
       if (args.template) {
         const res = await pullSampleCli(args.template, {
-          project: args.directory,
+          project: targetDir,
         });
         return {
           text: `Successfully initialized Tessera cart project from showcase template "${res.entry.title}" (${res.entry.id}) in ${res.dir}\n- ID: ${res.id}\n- Title: ${res.title}\n- Models: ${res.modelsCount}\n- SFX: ${res.hasSfx ? 'yes' : 'no'}\n- Music: ${res.hasMusic ? 'yes' : 'no'}`
         };
       }
-      const res = initProject(args.directory, {
-        name: args.name,
+      const res = initProject(targetDir, {
+        name: args.name || args.id,
         title: args.title,
         author: args.author
       });
@@ -413,8 +428,8 @@ export async function handleToolCall(name, args = {}) {
       const res = await pullSampleCli(args.id, {
         baseUrl: args.baseUrl,
         png: Boolean(args.png),
-        project: args.projectDir || false,
-        out: args.outputPath || null,
+        project: args.projectDir || args.directory || args.dir || args.path || false,
+        out: args.outputPath || args.output || null,
       });
       if (res.mode === 'project') {
         return {
@@ -427,7 +442,7 @@ export async function handleToolCall(name, args = {}) {
     }
 
     case 'tessera_check_cart': {
-      const target = args.path || '.';
+      const target = resolvePathArg(args, '.');
       const res = args.runtime
         ? await checkCartRuntimeCli(target, { frames: args.frames, keys: args.keys })
         : checkCartCli(target);
@@ -447,12 +462,12 @@ export async function handleToolCall(name, args = {}) {
     }
 
     case 'tessera_render_preview': {
-      const target = args.path || '.';
+      const target = resolvePathArg(args, '.');
       const res = await renderCartPreview(target, {
         frames: args.frames ?? 4,
         keys: args.keys,
         quality: args.quality,
-        out: args.outputPath || null,
+        out: args.outputPath || args.output || null,
         screenshot: true,
       });
       const summary = [
@@ -481,7 +496,7 @@ export async function handleToolCall(name, args = {}) {
     }
 
     case 'tessera_assemble_cart': {
-      const dir = path.resolve(process.cwd(), args.projectDir || '.');
+      const dir = path.resolve(process.cwd(), resolvePathArg(args, '.'));
       const text = assembleProject(dir);
       return {
         text: `Assembled cart (${text.length} characters):\n\n${text.slice(0, 500)}...\n[Truncated ${Math.max(0, text.length - 500)} characters]`
@@ -489,21 +504,41 @@ export async function handleToolCall(name, args = {}) {
     }
 
     case 'tessera_pack_cart': {
-      const res = await packCartCli(args.cartPath || '.', args.labelPath || null, args.outputPath || null);
+      const target = resolvePathArg(args, '.');
+      const label = args.labelPath || args.label || null;
+      const out = args.outputPath || args.output || null;
+      const res = await packCartCli(target, label, out, {
+        autoLabel: Boolean(args.autoLabel),
+        frames: args.frames,
+        keys: args.keys,
+        quality: args.quality,
+      });
+      const lines = [
+        '✓ Packed picture cart successfully:',
+        `- Output: ${res.outputPath}`,
+        `- Label: ${res.labelSource}`,
+        `- File size: ${Math.ceil(res.fileSize / 1024)} KiB`,
+        `- Capacity: ${Math.ceil(res.capacity / 1024)} KiB`,
+      ];
+      if (res.labelWarning) lines.push(`- Warning: ${res.labelWarning}`);
       return {
-        text: `✓ Packed picture cart successfully:\n- Output: ${res.outputPath}\n- File size: ${Math.ceil(res.fileSize / 1024)} KiB\n- Capacity: ${Math.ceil(res.capacity / 1024)} KiB`
+        text: lines.join('\n'),
+        images: (args.autoLabel || label) && res.pngBase64 ? [{ data: res.pngBase64, mimeType: 'image/png' }] : [],
       };
     }
 
     case 'tessera_export_html': {
-      const res = exportHtmlCli(args.cartPath || '.', args.outputPath || null);
+      const target = resolvePathArg(args, '.');
+      const out = args.outputPath || args.output || null;
+      const res = exportHtmlCli(target, out);
       return {
         text: `✓ Exported standalone offline HTML runner:\n- Output: ${res.outputPath}\n- File size: ${(res.fileSize / (1024 * 1024)).toFixed(2)} MB`
       };
     }
 
     case 'tessera_inspect_vox': {
-      const fullPath = path.resolve(process.cwd(), args.voxPath);
+      const voxArg = args.voxPath || args.path;
+      const fullPath = path.resolve(process.cwd(), voxArg);
       if (!fs.existsSync(fullPath)) {
         throw new Error(`File not found: ${args.voxPath}`);
       }
@@ -515,7 +550,7 @@ export async function handleToolCall(name, args = {}) {
     }
 
     case 'tessera_check_palette_budget': {
-      const dir = path.resolve(process.cwd(), args.projectDir || '.');
+      const dir = path.resolve(process.cwd(), resolvePathArg(args, '.'));
       const manifestPath = path.join(dir, 'tessera.json');
       if (!fs.existsSync(manifestPath)) {
         throw new Error(`tessera.json not found in ${dir}`);

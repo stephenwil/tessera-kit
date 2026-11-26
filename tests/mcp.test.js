@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { handleToolCall } from '../packages/tessera/src/mcp.js';
 import { checkCartCli } from '../packages/tessera/src/check.js';
+import { unpackCartCli } from '../packages/tessera/src/pack.js';
 import { findChromeExecutable } from '../packages/tessera/src/preview.js';
 
 test('MCP Tool Handlers: docs, init, static checks, assemble, pack', async () => {
@@ -22,6 +23,9 @@ test('MCP Tool Handlers: docs, init, static checks, assemble, pack', async () =>
     const camDoc = await handleToolCall('tessera_api_docs', { topic: 'camera' });
     assert.ok(camDoc.text.includes('camera(x, y, z'), 'Camera docs should document real camera() API');
     assert.equal(camDoc.text.includes('camtarget'), false, 'Camera docs must not list nonexistent camtarget');
+
+    const inputDoc = await handleToolCall('tessera_api_docs', { topic: 'input' });
+    assert.ok(inputDoc.text.includes('axis(1): +1 = Up'), 'Input docs should specify axis(1) polarity');
 
     const fmtDoc = await handleToolCall('tessera_api_docs', { topic: 'cart_format' });
     assert.ok(fmtDoc.text.includes('tessera.json'), 'cart_format docs should describe tessera.json');
@@ -49,12 +53,14 @@ test('MCP Tool Handlers: docs, init, static checks, assemble, pack', async () =>
     assert.ok(badCheck.errors.some((e) => e.includes('Unbalanced Lua blocks')), 'Should report unbalanced blocks');
     assert.ok(badCheck.warnings.some((w) => w.includes('camera(')), 'Should warn about hallucinated cam()');
 
-    // 4. Cart assemble tool
-    const assembleResult = await handleToolCall('tessera_assemble_cart', { projectDir: gameDir });
+    // 4. Cart assemble tool (testing unified path alias too)
+    const assembleResult = await handleToolCall('tessera_assemble_cart', { path: gameDir });
     assert.ok(assembleResult.text.includes('Assembled cart'), 'Cart assemble should succeed');
 
-    // 5. Cart pack tool
-    const packResult = await handleToolCall('tessera_pack_cart', { cartPath: gameDir });
+    // 5. Cart pack tool (testing unified path alias + export alias)
+    const packResult = await handleToolCall('tessera_pack_cart', { path: gameDir });
+    const exportResult = await handleToolCall('tessera_export_html', { path: gameDir });
+    assert.ok(exportResult.text.includes('Exported standalone offline HTML'), 'Export with path alias should succeed');
     assert.ok(packResult.text.includes('Packed picture cart successfully'), 'Cart pack should succeed');
     assert.ok(fs.existsSync(path.join(gameDir, 'dist', 'test-game.tess.png')), 'dist/test-game.tess.png should exist');
   } finally {
@@ -93,6 +99,26 @@ test('MCP Visual Preview & Headless Runtime Check (when Chromium is available)',
     const pngBuf = Buffer.from(previewRes.images[0].data, 'base64');
     assert.equal(pngBuf.subarray(0, 4).toString('hex'), '89504e47', 'Image payload must be valid PNG');
     assert.ok(fs.existsSync(outPng), 'Should write PNG to outputPath');
+
+    // 1b. Pack cart with framed 768x432 screenshot label AND autoLabel: true
+    const framedPack = await handleToolCall('tessera_pack_cart', {
+      path: gameDir,
+      labelPath: outPng,
+      output: path.join(tmpDir, 'framed.tess.png'),
+    });
+    assert.ok(framedPack.text.includes('framed-screenshot'), 'Should frame 768x432 screenshot into 256x256 label');
+    assert.equal(framedPack.images?.length, 1, 'Should return packed cover art image');
+    const unpacked = await unpackCartCli(path.join(tmpDir, 'framed.tess.png'), path.join(tmpDir, 'unpacked.tess'));
+    assert.ok(unpacked.cartText.includes('title=Preview Game'), 'Unpacked picture cart must preserve full cart payload');
+
+    const autoPack = await handleToolCall('tessera_pack_cart', {
+      path: gameDir,
+      autoLabel: true,
+      frames: 3,
+      output: path.join(tmpDir, 'auto.tess.png'),
+    });
+    assert.ok(autoPack.text.includes('auto-preview'), 'autoLabel should render live headless cover art');
+    assert.equal(autoPack.images?.length, 1, 'autoLabel pack should return inline PNG image');
 
     // 2. Runtime check catches a real Lua runtime error
     const brokenCart = path.join(tmpDir, 'broken-runtime.tess');
