@@ -60,10 +60,10 @@ text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
 
 <!-- Scaffolder Flow -->
 <rect x="30" y="75" width="440" height="225" rx="8" class="soft-sky"/>
-<text x="50" y="105" class="t-h">npm create @stephenwil/tessera</text>
+<text x="50" y="105" class="t-h">npm create @stephenwil/tessera@latest</text>
 
 <rect x="50" y="125" width="400" height="40" rx="4" class="k-box"/>
-<text x="65" y="150" class="t-b">&gt; npm create @stephenwil/tessera my-voxel-game</text>
+<text x="65" y="150" class="t-b">&gt; npm create @stephenwil/tessera@latest my-game</text>
 
 <rect x="50" y="175" width="190" height="110" rx="4" class="k-box"/>
 <text x="65" y="198" class="t-b">Generated Starter:</text>

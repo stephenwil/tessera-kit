@@ -11,7 +11,7 @@ Developer tools, CLI, MagicaVoxel pipeline, project scaffolder, and Model Contex
 All three packages are published on the **public npm registry**:
 
 - **[`@stephenwil/tessera`](https://www.npmjs.com/package/@stephenwil/tessera)**: Unified developer CLI (`init`, `dev`, `pack`, `unpack`, `vox`, `export`, `check`, `mcp`), live-reload dev server, `.vox` importer, `.tess.png` picture-cart codec, single-file HTML exporter, and built-in MCP server.
-- **[`@stephenwil/create-tessera`](https://www.npmjs.com/package/@stephenwil/create-tessera)**: Zero-setup project scaffolder (`npm create @stephenwil/tessera <my-game>`).
+- **[`@stephenwil/create-tessera`](https://www.npmjs.com/package/@stephenwil/create-tessera)**: Zero-setup project scaffolder (`npm create @stephenwil/tessera@latest <my-game>`).
 - **[`@stephenwil/tessera-mcp`](https://www.npmjs.com/package/@stephenwil/tessera-mcp)**: Dedicated standalone MCP server executable for AI coding agents.
 
 ---
@@ -22,7 +22,7 @@ Create, run, pack, and export a voxel game without cloning any repositories:
 
 ```sh
 # 1. Scaffold a new cart project
-npm create @stephenwil/tessera my-game
+npm create @stephenwil/tessera@latest my-game
 cd my-game
 npm install
 
@@ -126,7 +126,7 @@ Running `npm run pack` / `npm run build` (or zero-argument `tessera pack` / `tes
 
 - **Quickstart**:
   ```sh
-  npm create @stephenwil/tessera my-game
+  npm create @stephenwil/tessera@latest my-game
   cd my-game
   npm install
   npm run dev
@@ -197,7 +197,7 @@ The bundled CLI runner keeps only the minimal `hello` starter cart so your dev s
 
 ```sh
 # Open any downloaded demo cart locally with live reload
-npx @stephenwil/tessera dev path/to/downloaded.tess
+npx @stephenwil/tessera@latest dev path/to/downloaded.tess
 ```
 
 ### Local Network & Tailscale Testing
@@ -212,17 +212,17 @@ npx @stephenwil/tessera dev path/to/downloaded.tess
 
 AI coding agents can create, validate, pack, and export Tessera games in two ways:
 
-1. **Without MCP (shell / terminal agents)**: Any agent with shell access can run `npm create @stephenwil/tessera my-game`, write Lua into `src/main.lua`, validate with `npx @stephenwil/tessera check`, pack with `npx @stephenwil/tessera pack`, and export playable HTML with `npx @stephenwil/tessera export`.
+1. **Without MCP (shell / terminal agents)**: Any agent with shell access can run `npm create @stephenwil/tessera@latest my-game`, write Lua into `src/main.lua`, validate with `npx @stephenwil/tessera check`, pack with `npx @stephenwil/tessera pack`, and export playable HTML with `npx @stephenwil/tessera export`.
 2. **With MCP (recommended for Claude Desktop, Cursor, T3 Code, and tool-only agents)**: Connect the built-in **Model Context Protocol (MCP)** server so the agent gets structured tools and live, accurate API documentation without shelling out or guessing function signatures.
 
 ### Starting the MCP Server
 
 ```sh
 # Via the main CLI package
-npx -y @stephenwil/tessera mcp
+npx -y @stephenwil/tessera@latest mcp
 
 # Or via the dedicated standalone MCP package
-npx -y @stephenwil/tessera-mcp
+npx -y @stephenwil/tessera-mcp@latest
 ```
 
 ### Client Configuration (`claude_desktop_config.json`, Cursor, T3 Code)
@@ -232,7 +232,7 @@ npx -y @stephenwil/tessera-mcp
   "mcpServers": {
     "tessera": {
       "command": "npx",
-      "args": ["-y", "@stephenwil/tessera", "mcp"]
+      "args": ["-y", "@stephenwil/tessera@latest", "mcp"]
     }
   }
 }
@@ -245,7 +245,7 @@ Or using the dedicated package:
   "mcpServers": {
     "tessera": {
       "command": "npx",
-      "args": ["-y", "@stephenwil/tessera-mcp"]
+      "args": ["-y", "@stephenwil/tessera-mcp@latest"]
     }
   }
 }

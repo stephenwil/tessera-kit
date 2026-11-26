@@ -6,7 +6,7 @@ Developer CLI, live-reload dev server, `.vox` importer, `.tess.png` picture-cart
 
 ```sh
 # Scaffold a new project
-npm create @stephenwil/tessera my-game
+npm create @stephenwil/tessera@latest my-game
 cd my-game
 npm install
 

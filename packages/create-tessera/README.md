@@ -5,7 +5,7 @@ Project scaffolder for the **Tessera High-Res** voxel fantasy console.
 ## Usage
 
 ```sh
-npm create @stephenwil/tessera my-game
+npm create @stephenwil/tessera@latest my-game
 cd my-game
 npm install
 npm run dev
@@ -14,7 +14,7 @@ npm run dev
 Or run directly with `npx`:
 
 ```sh
-npx @stephenwil/create-tessera my-game
+npx @stephenwil/create-tessera@latest my-game
 ```
 
 ## What It Generates

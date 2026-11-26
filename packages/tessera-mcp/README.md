@@ -11,7 +11,7 @@ Add to your MCP client configuration (`claude_desktop_config.json`, Cursor MCP s
   "mcpServers": {
     "tessera": {
       "command": "npx",
-      "args": ["-y", "@stephenwil/tessera-mcp"]
+      "args": ["-y", "@stephenwil/tessera-mcp@latest"]
     }
   }
 }

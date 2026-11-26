@@ -12,8 +12,8 @@ const targetDir = path.resolve(process.cwd(), target);
 
 const HELP = `
 Usage:
-  npm create @stephenwil/tessera <directory>
-  npx @stephenwil/create-tessera <directory>
+  npm create @stephenwil/tessera@latest <directory>
+  npx @stephenwil/create-tessera@latest <directory>
 
 Options:
   --help, -h          Show help message
