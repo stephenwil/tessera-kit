@@ -1,6 +1,6 @@
 {
   "name": "@stephenwil/tessera-mcp",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Model Context Protocol (MCP) server for the Tessera High-Res voxel fantasy console",
   "type": "module",
   "bin": {
@@ -24,6 +24,6 @@
   "author": "Stephen Wilson",
   "license": "MIT",
   "dependencies": {
-    "@stephenwil/tessera": "^0.1.8"
+    "@stephenwil/tessera": "^0.1.9"
   }
 }

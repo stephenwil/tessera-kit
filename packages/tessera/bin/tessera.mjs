@@ -51,7 +51,7 @@ Options:
   --json                          Output sample catalog as JSON (with samples)
   --runtime                       Boot cart in headless Chromium during check
   --frames <number>               Frames to step before preview screenshot (default: 4)
-  --keys <spec>                   Scripted inputs for preview/check (e.g. "ArrowRight:8,Space:3")
+  --keys <spec>                   Scripted inputs for preview/check (e.g. "ArrowRight:8,Space:2"; omit :N for 10 frames)
   --quality <standard|hq>         Override render quality for preview
   --auto-label                    Render headless cover art automatically during pack
   --filmstrip [count]             Capture a multi-frame contact sheet (2..6 frames, default 4)

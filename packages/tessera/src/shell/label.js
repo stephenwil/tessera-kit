@@ -87,6 +87,19 @@ const FONT_5X7 = Array.from({ length: 95 }, (_, i) => {
   return Array.from({ length: 35 }, (_, b) => (rows[Math.floor(b / 5)][b % 5] === '#' ? 1 : 0));
 });
 
+function normalizeAscii(s) {
+  return String(s ?? '')
+    .replace(/[\u2014\u2013\u2212]/g, '-')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u2026/g, '...')
+    .replace(/\u00D7/g, 'x')
+    .replace(/[\u00B7\u2022]/g, '.')
+    .replace(/\u00B0/g, ' DEG')
+    .replace(/\u2192/g, '->')
+    .replace(/\u2190/g, '<-');
+}
+
 function glyphBits(ch) {
   const code = typeof ch === 'number' ? ch : String(ch).charCodeAt(0);
   return FONT_5X7[code >= 32 && code <= 126 ? code - 32 : '?'.charCodeAt(0) - 32];
@@ -105,7 +118,7 @@ function fill(l, x0, y0, w, h, rgb) {
 }
 
 function text(l, s, x, y, rgb, scale = 1, maxW = Infinity) {
-  s = String(s ?? '');
+  s = normalizeAscii(s);
   const fit = Math.floor((maxW + scale) / (6 * scale));
   if (s.length > fit) s = `${s.slice(0, Math.max(0, fit - 2))}..`;
   for (let i = 0; i < s.length; i++) {
@@ -321,7 +334,7 @@ function fillBuf(buf, bw, bh, x0, y0, w, h, rgb) {
 }
 
 function textBuf(buf, bw, bh, s, x, y, rgb, scale = 1, maxW = Infinity) {
-  s = String(s ?? '');
+  s = normalizeAscii(s);
   const fit = Math.floor((maxW + scale) / (6 * scale));
   if (s.length > fit) s = `${s.slice(0, Math.max(0, fit - 2))}..`;
   for (let i = 0; i < s.length; i++) {
@@ -364,7 +377,7 @@ export async function composeContactSheet(tiles, options = {}) {
     }
     textBuf(buf, outW, outH, options.title, pad + 36, 10, INK, 1, outW - 140);
     if (options.subtitle) {
-      const sub = String(options.subtitle);
+      const sub = normalizeAscii(options.subtitle);
       const sw = sub.length * 6;
       textBuf(buf, outW, outH, sub, Math.max(pad + 120, outW - pad - sw), 10, INK_DIM, 1, outW - 120);
     }

@@ -691,7 +691,7 @@ export async function renderCartPreview(cartPath = '.', options = {}) {
           await captureTile(`F${snap.frames}`);
         }
         const sheet = await composeContactSheet(filmstripTiles, {
-          title: options.filmstripTitle || `${parsed.meta?.title || parsed.meta?.id || 'TESSERA'} — FILMSTRIP`,
+          title: options.filmstripTitle || `${parsed.meta?.title || parsed.meta?.id || 'TESSERA'} - FILMSTRIP`,
           subtitle: options.filmstripSubtitle || `${filmstripTiles.length} FRAMES`,
         });
         pngBase64 = Buffer.from(sheet.pngBytes).toString('base64');

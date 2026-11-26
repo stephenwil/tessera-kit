@@ -10,6 +10,7 @@ import { handleToolCall } from '../packages/tessera/src/mcp.js';
 import { checkCartCli } from '../packages/tessera/src/check.js';
 import { unpackCartCli } from '../packages/tessera/src/pack.js';
 import { findChromeExecutable } from '../packages/tessera/src/preview.js';
+import { composeContactSheet } from '../packages/tessera/src/shell/label.js';
 
 test('MCP Tool Handlers: docs, init, static checks, assemble, pack', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tessera-mcp-test-'));
@@ -267,4 +268,29 @@ test('MCP Protocol JSON-RPC Stdio Handshake, Tools, Prompts & Tool Calling', asy
     proc.stdin.end();
     proc.kill();
   }
+});
+
+test('composeContactSheet normalizes Unicode punctuation to ASCII glyphs', async () => {
+  const rgba = new Uint8ClampedArray(16 * 16 * 4).fill(64);
+  const tile = { rgba, width: 16, height: 16, label: 'F1 -> F2' };
+  const tileUni = { rgba, width: 16, height: 16, label: 'F1 → F2' };
+
+  const ascii = await composeContactSheet([tile, tile], {
+    title: 'SOLARIS - FILMSTRIP',
+    subtitle: '12x12x12 90 DEG',
+    tileW: 64,
+    tileH: 36,
+  });
+  const unicode = await composeContactSheet([tileUni, tileUni], {
+    title: 'SOLARIS — FILMSTRIP',
+    subtitle: '12×12×12 90°',
+    tileW: 64,
+    tileH: 36,
+  });
+
+  assert.equal(
+    Buffer.from(unicode.pngBytes).equals(Buffer.from(ascii.pngBytes)),
+    true,
+    'Unicode dashes, arrows, multiply, and degree symbols should normalize to identical ASCII pixel output'
+  );
 });

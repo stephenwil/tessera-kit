@@ -172,7 +172,7 @@ const TOOLS = [
         path: { type: 'string', description: 'Path to a .tess file or a project directory containing tessera.json (defaults to ".").' },
         runtime: { type: 'boolean', description: 'If true, boot the cart in headless Chromium for several frames to catch real Lua 5.4 syntax/runtime errors.' },
         frames: { type: 'number', description: 'Number of frames to step when runtime is true (default: 3).' },
-        keys: { type: 'string', description: 'Optional scripted key inputs during runtime check, e.g. "ArrowRight:10,Space:3".' }
+        keys: { type: 'string', description: 'Optional scripted key inputs during runtime check, e.g. "ArrowRight:10,Space:2" (omitting ":N" defaults to 10 frames; use ":1" for discrete button taps).' }
       }
     }
   },
@@ -184,9 +184,9 @@ const TOOLS = [
       properties: {
         path: { type: 'string', description: 'Path to a .tess file or a project directory containing tessera.json (defaults to ".").' },
         frames: { type: 'number', description: 'Initial settle frames to render before sending keys or capturing screenshot (default: 4; ~0.13s game time per frame at speed=4).' },
-        keys: { type: 'string', description: 'Optional comma-separated key inputs run after initial frames, e.g. "Space:2,ArrowRight:6" (each step holds the key for N rendered frames at ~4 sim ticks/frame, followed by 1 settle frame).' },
+        keys: { type: 'string', description: 'Optional comma-separated key inputs run after initial frames, e.g. "Space:2,ArrowRight:6" or "z:1,ArrowRight:1,z:1" (each step holds the key for N rendered frames at ~4 sim ticks/frame, followed by 1 settle frame; omitting ":N" defaults to 10 frames, so use ":1" or ":2" for discrete puzzle/menu taps).' },
         quality: { type: 'string', enum: ['standard', 'hq'], description: 'Optional render quality override ("standard" or "hq").' },
-        filmstrip: { type: ['boolean', 'number'], description: 'Set true (4 frames) or a number 2..6 to capture a labeled multi-frame contact sheet showing motion/animation across frames in a single call.' },
+        filmstrip: { type: ['boolean', 'number'], description: 'Set true (4 frames) or a number 2..6 to capture a labeled multi-frame contact sheet showing motion/animation across frames in a single call. When paired with keys, captures frame 1 before keys and one frame after each key step.' },
         filmstripStep: { type: 'number', description: 'Frames between filmstrip captures when keys is not specified (default: 3).' },
         outputPath: { type: 'string', description: 'Optional path to save the rendered PNG screenshot to disk (alias: output).' }
       }
