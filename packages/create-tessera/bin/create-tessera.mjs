@@ -3,61 +3,200 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  DEFAULT_SHOWCASE_URL,
+  fetchShowcaseCatalog,
+  fetchShowcaseCart,
+  extractTemplateProject,
+  formatTemplateTable,
+} from '../src/showcase.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const args = process.argv.slice(2);
-const target = args.find(a => !a.startsWith('-')) || '.';
-const targetDir = path.resolve(process.cwd(), target);
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
 
 const HELP = `
 Usage:
   npm create @stephenwil/tessera@latest <directory>
-  npx @stephenwil/create-tessera@latest <directory>
+  npm create @stephenwil/tessera@latest <directory> -- --template <sample-id>
+  npm create @stephenwil/tessera@latest -- --list
+  npx @stephenwil/create-tessera@latest <directory> [--template <sample-id>]
 
 Options:
-  --help, -h          Show help message
-  --version, -v       Show version
+  -t, --template <id>     Start from any playable Tessera Showcase cart
+  --list, --list-templates List available showcase templates
+  --registry <url>        Override showcase catalog base URL
+  --help, -h              Show help message
+  --version, -v           Show version
 `;
 
-if (args.includes('--help') || args.includes('-h')) {
-  console.log(HELP.trim());
-  process.exit(0);
+const VSCODE_GLOBALS = [
+  '_init', '_update', '_draw',
+  'vset', 'vget', 'box', 'sphere', 'line3d',
+  'model', 'newmodel', 'mpset', 'msize', 'mvox', 'particle',
+  'mset', 'mget', 'mbox', 'mmodel', 'mheight', 'mclear',
+  'camera', 'sun', 'sky', 'fog', 'pal', 'palt', 'pswap', 'quality',
+  'cls', 'rect', 'rectfill', 'circfill', 'spr2d', 'print', 'textw', 'project',
+  'raycast3d', 'check_box', 'sweep_box', 'sweep_down', 'vheight',
+  'tone', 'sfx', 'mute', 'music', 'music_stop', 'music_pos', 'music_vol',
+  'btn', 'btnp', 'axis',
+  't', 'flr', 'mid', 'rnd', 'noise3', 'stat', 'dget', 'dset', 'printh',
+];
+
+function parseArgs(argv) {
+  const options = {};
+  const positional = [];
+  const flagsWithValue = new Set(['-t', '--template', '--registry']);
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--') continue;
+    if (arg.startsWith('--')) {
+      const eq = arg.indexOf('=');
+      if (eq !== -1) {
+        options[arg.slice(0, eq)] = arg.slice(eq + 1);
+      } else if (flagsWithValue.has(arg) && i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
+        options[arg] = argv[++i];
+      } else {
+        options[arg] = true;
+      }
+    } else if (arg.startsWith('-')) {
+      if (flagsWithValue.has(arg) && i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
+        options[arg] = argv[++i];
+      } else {
+        options[arg] = true;
+      }
+    } else {
+      positional.push(arg);
+    }
+  }
+  return { options, positional };
 }
 
-if (args.includes('--version') || args.includes('-v')) {
-  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
-  console.log(`create-tessera v${pkg.version}`);
-  process.exit(0);
+function writeCommonProjectFiles(targetDir, manifest, packageName, description) {
+  const projectPkg = {
+    name: packageName,
+    version: '1.0.0',
+    private: true,
+    type: 'module',
+    scripts: {
+      dev: 'tessera dev',
+      pack: 'tessera pack',
+      build: 'tessera pack && tessera export',
+      check: 'tessera check',
+    },
+    devDependencies: {
+      '@stephenwil/tessera': `^${pkg.version}`,
+    },
+  };
+  fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify(projectPkg, null, 2) + '\n');
+
+  const vscodeSettings = {
+    'Lua.runtime.version': 'Lua 5.4',
+    'Lua.diagnostics.globals': VSCODE_GLOBALS,
+  };
+  fs.writeFileSync(path.join(targetDir, '.vscode/settings.json'), JSON.stringify(vscodeSettings, null, 2) + '\n');
+  fs.writeFileSync(path.join(targetDir, '.gitignore'), 'dist/\nnode_modules/\n.DS_Store\n*.tmp\n');
+
+  const readme = `# ${manifest.title}
+
+${description ? description + '\n\n' : ''}A game for the [Tessera High-Res](https://github.com/stephenwil/tessera-kit) voxel fantasy console.
+
+## Development
+
+\`\`\`sh
+# Start live development server
+npm run dev
+
+# Validate cart syntax & manifest
+npm run check
+
+# Build .tess and .tess.png cartridge
+npm run pack
+
+# Export offline standalone single-file HTML
+npm run build
+\`\`\`
+`;
+  fs.writeFileSync(path.join(targetDir, 'README.md'), readme);
 }
 
-console.log(`\nCreating a new Tessera cart project in ${targetDir}...\n`);
+async function main() {
+  const { options, positional } = parseArgs(process.argv.slice(2));
 
-const projectName = path.basename(targetDir) === '.' ? 'my-cart' : path.basename(targetDir);
+  if (options['--help'] || options['-h']) {
+    console.log(HELP.trim());
+    process.exit(0);
+  }
 
-// 1. Create directory structure
-fs.mkdirSync(path.join(targetDir, 'src'), { recursive: true });
-fs.mkdirSync(path.join(targetDir, 'models'), { recursive: true });
-fs.mkdirSync(path.join(targetDir, 'assets'), { recursive: true });
-fs.mkdirSync(path.join(targetDir, '.vscode'), { recursive: true });
+  if (options['--version'] || options['-v']) {
+    console.log(`create-tessera v${pkg.version}`);
+    process.exit(0);
+  }
 
-// 2. tessera.json manifest
-const manifest = {
-  id: projectName.toLowerCase().replace(/[^a-z0-9_-]/g, '-'),
-  title: projectName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-  author: 'Developer',
-  version: '1.0.0',
-  description: 'A new game made for the Tessera High-Res voxel fantasy console.',
-  lua: [
-    'src/main.lua'
-  ],
-  models: {},
-  palette: 'assets/palette.txt'
-};
-fs.writeFileSync(path.join(targetDir, 'tessera.json'), JSON.stringify(manifest, null, 2) + '\n');
+  const baseUrl = options['--registry'] || undefined;
 
-// 3. src/main.lua starter code
-const starterLua = `-- ${manifest.title}
+  if (options['--list'] || options['--list-templates']) {
+    const catalog = await fetchShowcaseCatalog({ baseUrl });
+    console.log(`\nTessera Showcase Templates (${baseUrl || process.env.TESSERA_SHOWCASE_URL || DEFAULT_SHOWCASE_URL}):\n`);
+    console.log(formatTemplateTable(catalog));
+    console.log('\nScaffold a project from any sample:');
+    console.log('  npm create @stephenwil/tessera@latest my-game -- --template <id>\n');
+    process.exit(0);
+  }
+
+  const template = options['--template'] || options['-t'];
+  if (template === true) {
+    console.error('Error: --template requires a sample ID (run with --list to see available samples).');
+    process.exit(1);
+  }
+
+  const target = positional[0] || (template ? template : '.');
+  const targetDir = path.resolve(process.cwd(), target);
+  const relDir = path.relative(process.cwd(), targetDir) || '.';
+  const dirSlug = path.basename(targetDir).toLowerCase().replace(/[^a-z0-9_-]/g, '-') || 'my-cart';
+
+  if (template) {
+    console.log(`\nFetching showcase template "${template}"...\n`);
+    const { entry, cartText } = await fetchShowcaseCart(template, { baseUrl });
+    const extracted = extractTemplateProject(cartText, targetDir, {
+      id: positional[0] && positional[0] !== '.' ? dirSlug : entry.id,
+      description: entry.description,
+    });
+    writeCommonProjectFiles(targetDir, extracted.manifest, dirSlug, entry.description);
+
+    console.log(`Success! Created "${entry.title}" (${entry.id}) in ${targetDir}`);
+    const extras = [];
+    if (extracted.modelsCount) extras.push(`${extracted.modelsCount} model(s)`);
+    if (extracted.hasSfx) extras.push('assets/sfx.txt');
+    if (extracted.hasMusic) extras.push('assets/music.txt');
+    if (extras.length) {
+      console.log(`  Included: tessera.json, src/main.lua, ${extras.join(', ')}`);
+    }
+    console.log(`\nNext steps:\n  cd ${relDir}\n  npm install\n  npm run dev\n`);
+    return;
+  }
+
+  console.log(`\nCreating a new Tessera cart project in ${targetDir}...\n`);
+
+  const projectName = path.basename(targetDir) === '.' ? 'my-cart' : path.basename(targetDir);
+
+  fs.mkdirSync(path.join(targetDir, 'src'), { recursive: true });
+  fs.mkdirSync(path.join(targetDir, 'models'), { recursive: true });
+  fs.mkdirSync(path.join(targetDir, 'assets'), { recursive: true });
+  fs.mkdirSync(path.join(targetDir, '.vscode'), { recursive: true });
+
+  const manifest = {
+    id: projectName.toLowerCase().replace(/[^a-z0-9_-]/g, '-'),
+    title: projectName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    author: 'Developer',
+    version: '1.0.0',
+    description: 'A new game made for the Tessera High-Res voxel fantasy console.',
+    lua: ['src/main.lua'],
+    models: {},
+    palette: 'assets/palette.txt',
+  };
+  fs.writeFileSync(path.join(targetDir, 'tessera.json'), JSON.stringify(manifest, null, 2) + '\n');
+
+  const starterLua = `-- ${manifest.title}
 -- Built for Tessera High-Res Voxel Console (256x256x128 volume, 768x432 HUD)
 
 local px, py, pz = 128, 128, 2
@@ -112,10 +251,9 @@ function _draw()
   print("Arrows / WASD / Gamepad to move", 32, 44, 6)
 end
 `;
-fs.writeFileSync(path.join(targetDir, 'src/main.lua'), starterLua);
+  fs.writeFileSync(path.join(targetDir, 'src/main.lua'), starterLua);
 
-// 4. assets/palette.txt default palette
-const defaultPal = `# Tessera Custom Palette
+  const defaultPal = `# Tessera Custom Palette
 # Index: #RRGGBB
 1: #181a20
 2: #282c37
@@ -133,116 +271,19 @@ const defaultPal = `# Tessera Custom Palette
 14: #8839ef
 15: #ea76cb
 `;
-fs.writeFileSync(path.join(targetDir, 'assets/palette.txt'), defaultPal);
+  fs.writeFileSync(path.join(targetDir, 'assets/palette.txt'), defaultPal);
 
-// 5. package.json for project scripts
-const projectPkg = {
-  name: manifest.id,
-  version: '1.0.0',
-  private: true,
-  type: 'module',
-  scripts: {
-    dev: 'tessera dev',
-    pack: 'tessera pack',
-    build: 'tessera pack && tessera export',
-    check: 'tessera check'
-  },
-  devDependencies: {
-    '@stephenwil/tessera': '^0.1.4'
-  }
-};
-fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify(projectPkg, null, 2) + '\n');
+  writeCommonProjectFiles(targetDir, manifest, manifest.id, manifest.description);
 
-// 6. VS Code LuaLS settings
-const vscodeSettings = {
-  "Lua.runtime.version": "Lua 5.4",
-  "Lua.diagnostics.globals": [
-    "_init",
-    "_update",
-    "_draw",
-    "vset",
-    "vget",
-    "box",
-    "sphere",
-    "line3d",
-    "model",
-    "newmodel",
-    "mpset",
-    "msize",
-    "mvox",
-    "particle",
-    "mset",
-    "mget",
-    "mbox",
-    "mmodel",
-    "mheight",
-    "mclear",
-    "camera",
-    "sun",
-    "sky",
-    "fog",
-    "pal",
-    "palt",
-    "pswap",
-    "quality",
-    "cls",
-    "rect",
-    "rectfill",
-    "circfill",
-    "spr2d",
-    "print",
-    "textw",
-    "project",
-    "raycast3d",
-    "check_box",
-    "sweep_box",
-    "sweep_down",
-    "vheight",
-    "tone",
-    "sfx",
-    "mute",
-    "music",
-    "music_stop",
-    "music_pos",
-    "music_vol",
-    "btn",
-    "btnp",
-    "axis",
-    "t",
-    "flr",
-    "mid",
-    "rnd",
-    "noise3",
-    "stat",
-    "dget",
-    "dset",
-    "printh"
-  ]
-};
-fs.writeFileSync(path.join(targetDir, '.vscode/settings.json'), JSON.stringify(vscodeSettings, null, 2) + '\n');
+  console.log(`Success! Project initialized.\n`);
+  console.log(`Next steps:\n  cd ${relDir}\n  npm install\n  npm run dev\n`);
+  console.log(`Want to start from a full playable showcase cart instead?`);
+  console.log(`  npx @stephenwil/tessera@latest samples`);
+  console.log(`  npm create @stephenwil/tessera@latest my-sample -- --template <id>`);
+  console.log(`  Browse online: ${DEFAULT_SHOWCASE_URL}/\n`);
+}
 
-// 7. README.md
-const readme = `# ${manifest.title}
-
-A game for the [Tessera High-Res](https://github.com/stephenwil/tessera-kit) voxel fantasy console.
-
-## Development
-
-\`\`\`sh
-# Start live development server
-npm run dev
-
-# Validate cart syntax & manifest
-npm run check
-
-# Build .tess and .tess.png cartridge
-npm run pack
-
-# Export offline standalone single-file HTML
-npm run build
-\`\`\`
-`;
-fs.writeFileSync(path.join(targetDir, 'README.md'), readme);
-
-console.log(`Success! Project initialized.\n`);
-console.log(`Next steps:\n  cd ${path.relative(process.cwd(), targetDir) || '.'}\n  npm install\n  npm run dev\n`);
+main().catch((err) => {
+  console.error(`Error: ${err.message}`);
+  process.exit(1);
+});

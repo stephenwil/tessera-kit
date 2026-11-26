@@ -3,6 +3,8 @@ import path from 'node:path';
 import { parseVox, voxModelToTessera } from './cart/vox.js';
 import { formatModelText } from './vox.js';
 
+const STANDARD_META_KEYS = new Set(['title', 'author', 'version', 'id', 'players', 'quality']);
+
 export function assembleProject(projectDir = '.') {
   const baseDir = path.resolve(process.cwd(), projectDir);
   const manifestPath = path.join(baseDir, 'tessera.json');
@@ -18,7 +20,18 @@ export function assembleProject(projectDir = '.') {
   lines.push(`author=${manifest.author || 'Unknown'}`);
   lines.push(`version=${manifest.version || '1.0.0'}`);
   if (manifest.id) lines.push(`id=${manifest.id}`);
-  if (manifest.players) lines.push(`players=${manifest.players}`);
+  if (manifest.players !== undefined && manifest.players !== null && manifest.players !== '') {
+    lines.push(`players=${manifest.players}`);
+  }
+  if (manifest.quality) lines.push(`quality=${manifest.quality}`);
+  if (manifest.meta && typeof manifest.meta === 'object') {
+    for (const [k, v] of Object.entries(manifest.meta)) {
+      if (STANDARD_META_KEYS.has(k)) continue;
+      if (v !== undefined && v !== null && String(v).trim() !== '') {
+        lines.push(`${k}=${v}`);
+      }
+    }
+  }
 
   // Palette
   lines.push('__pal__');
@@ -26,7 +39,7 @@ export function assembleProject(projectDir = '.') {
     const palPath = path.resolve(baseDir, manifest.palette);
     if (fs.existsSync(palPath)) {
       const palContent = fs.readFileSync(palPath, 'utf8');
-      for (const line of palContent.split('\n')) {
+      for (const line of palContent.split(/\r?\n/)) {
         const trimmed = line.trim();
         if (trimmed && !trimmed.startsWith('#')) {
           // Normalize "1: #181a20" or "1: 181a20" -> "1 181a20"
@@ -45,27 +58,25 @@ export function assembleProject(projectDir = '.') {
   lines.push('__models__');
   if (manifest.models && typeof manifest.models === 'object') {
     for (const [modelId, spec] of Object.entries(manifest.models)) {
-      if (typeof spec === 'string' && spec.endsWith('.vox')) {
-        const voxFile = path.resolve(baseDir, spec);
-        if (fs.existsSync(voxFile)) {
-          const parsed = parseVox(fs.readFileSync(voxFile));
-          for (let i = 0; i < parsed.models.length; i++) {
-            const id = parsed.models.length > 1 ? `${modelId}_${i}` : modelId;
-            const modelObj = voxModelToTessera(parsed.models[i], id, new Map(), parsed.palette);
-            lines.push(formatModelText(modelObj));
-          }
+      const fileRel = typeof spec === 'string' ? spec : (spec && typeof spec === 'object' ? spec.file : null);
+      if (!fileRel) continue;
+      const modelFile = path.resolve(baseDir, fileRel);
+      if (!fs.existsSync(modelFile)) continue;
+
+      if (fileRel.toLowerCase().endsWith('.vox')) {
+        const parsed = parseVox(fs.readFileSync(modelFile));
+        const pivot = typeof spec === 'object' && Array.isArray(spec.pivot) ? spec.pivot : null;
+        for (let i = 0; i < parsed.models.length; i++) {
+          const id = parsed.models.length > 1 ? `${modelId}_${i}` : modelId;
+          const modelObj = voxModelToTessera(parsed.models[i], id, new Map(), parsed.palette);
+          if (pivot) modelObj.pivot = pivot;
+          lines.push(formatModelText(modelObj));
         }
-      } else if (typeof spec === 'object' && spec.file) {
-        const voxFile = path.resolve(baseDir, spec.file);
-        if (fs.existsSync(voxFile)) {
-          const parsed = parseVox(fs.readFileSync(voxFile));
-          const pivot = Array.isArray(spec.pivot) ? spec.pivot : null;
-          for (let i = 0; i < parsed.models.length; i++) {
-            const id = parsed.models.length > 1 ? `${modelId}_${i}` : modelId;
-            const modelObj = voxModelToTessera(parsed.models[i], id, new Map(), parsed.palette);
-            if (pivot) modelObj.pivot = pivot;
-            lines.push(formatModelText(modelObj));
-          }
+      } else {
+        const text = fs.readFileSync(modelFile, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').trim();
+        if (text) {
+          lines.push(text);
+          lines.push('');
         }
       }
     }
@@ -77,11 +88,26 @@ export function assembleProject(projectDir = '.') {
     const sfxPath = path.resolve(baseDir, manifest.sfx);
     if (fs.existsSync(sfxPath)) {
       const sfxContent = fs.readFileSync(sfxPath, 'utf8');
-      for (const line of sfxContent.split('\n')) {
+      for (const line of sfxContent.split(/\r?\n/)) {
         const trimmed = line.trim();
         if (trimmed && !trimmed.startsWith('#')) {
           lines.push(trimmed);
         }
+      }
+    }
+  }
+
+  // Music (optional tracker section)
+  if (manifest.music) {
+    const musicPath = path.resolve(baseDir, manifest.music);
+    if (fs.existsSync(musicPath)) {
+      const musicLines = fs.readFileSync(musicPath, 'utf8')
+        .replace(/^\uFEFF/, '')
+        .split(/\r?\n/)
+        .filter((line) => !line.trim().startsWith('#'));
+      if (musicLines.some((line) => line.trim().length > 0)) {
+        lines.push('__music__');
+        lines.push(...musicLines);
       }
     }
   }
@@ -92,7 +118,7 @@ export function assembleProject(projectDir = '.') {
   for (const lf of luaFiles) {
     const fullLuaPath = path.resolve(baseDir, lf);
     if (fs.existsSync(fullLuaPath)) {
-      lines.push(fs.readFileSync(fullLuaPath, 'utf8'));
+      lines.push(fs.readFileSync(fullLuaPath, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n'));
     } else {
       console.warn(`[assembleProject] Lua file not found: ${fullLuaPath}`);
     }

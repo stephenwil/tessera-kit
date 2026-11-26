@@ -191,13 +191,24 @@ Carts exist as either human-readable `.tess` text files or steganographic `.tess
                                     └───► File picker ("Load cart...")
 ```
 
-### Downloading Demo Carts (Tessera Showcase)
+### Downloading Sample Carts (CLI & Tessera Showcase)
 
-The bundled CLI runner keeps only the minimal `hello` starter cart so your dev server and exported `.html` builds stay lean (~647 KiB). To play, inspect, or download full demo carts (`.tess` source and `.tess.png` picture carts), visit the **[Tessera Cartridge Showcase](https://stephenwil.github.io/tessera-showcase/)**:
+The bundled CLI runner keeps only the minimal `hello` starter cart so your dev server and exported `.html` builds stay lean (~647 KiB). All playable sample carts live on the **[Tessera Cartridge Showcase](https://stephenwil.github.io/tessera-showcase/)** and can be listed, downloaded, or unpacked into editable projects straight from the CLI:
 
 ```sh
-# Open any downloaded demo cart locally with live reload
-npx @stephenwil/tessera@latest dev path/to/downloaded.tess
+# List all available showcase carts
+npx @stephenwil/tessera@latest samples
+
+# Download a raw .tess cart (or --png for a .tess.png picture cart)
+npx @stephenwil/tessera@latest pull bramblecourt
+npx @stephenwil/tessera@latest dev bramblecourt.tess
+
+# Unpack any showcase cart into a full editable project (tessera.json, Lua, models, palette, audio)
+npx @stephenwil/tessera@latest pull bramblecourt --project my-arena
+
+# Or scaffold directly from any showcase template with create-tessera
+npm create @stephenwil/tessera@latest -- --list
+npm create @stephenwil/tessera@latest my-arena -- --template bramblecourt
 ```
 
 ### Local Network & Tailscale Testing

@@ -69,6 +69,15 @@ test('MCP Protocol JSON-RPC Stdio Handshake & Tool Calling', async (t) => {
   function sendReq(obj) {
     proc.stdin.write(JSON.stringify(obj) + '\n');
   }
+  async function waitForResponse(id, timeoutMs = 3000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const hit = responses.find((r) => r.id === id);
+      if (hit) return hit;
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    return undefined;
+  }
 
   // 1. Send initialize
   sendReq({
@@ -82,8 +91,7 @@ test('MCP Protocol JSON-RPC Stdio Handshake & Tool Calling', async (t) => {
   });
 
   // Wait for init response
-  await new Promise((r) => setTimeout(r, 200));
-  const initResp = responses.find((r) => r.id === 1);
+  const initResp = await waitForResponse(1);
   assert.ok(initResp, 'Should receive initialize response');
   assert.equal(initResp.result.serverInfo.name, '@stephenwil/tessera-mcp');
 
@@ -94,8 +102,7 @@ test('MCP Protocol JSON-RPC Stdio Handshake & Tool Calling', async (t) => {
     method: 'tools/list'
   });
 
-  await new Promise((r) => setTimeout(r, 200));
-  const listResp = responses.find((r) => r.id === 2);
+  const listResp = await waitForResponse(2);
   assert.ok(listResp, 'Should receive tools/list response');
   const toolNames = listResp.result.tools.map((x) => x.name);
   assert.ok(toolNames.includes('tessera_init_cart'), 'Should list tessera_init_cart');
@@ -114,8 +121,7 @@ test('MCP Protocol JSON-RPC Stdio Handshake & Tool Calling', async (t) => {
     }
   });
 
-  await new Promise((r) => setTimeout(r, 200));
-  const callResp = responses.find((r) => r.id === 3);
+  const callResp = await waitForResponse(3);
   assert.ok(callResp, 'Should receive tools/call response');
   assert.ok(callResp.result.content[0].text.includes('mset'), 'Should return map API documentation');
 

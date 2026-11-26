@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
-
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { initProject } from '../src/init.js';
 import { packCartCli, unpackCartCli } from '../src/pack.js';
 import { importVoxCli } from '../src/vox.js';
@@ -10,12 +10,26 @@ import { exportHtmlCli } from '../src/export.js';
 import { checkCartCli } from '../src/check.js';
 import { startDevCli } from '../src/dev.js';
 import { startMcpServer } from '../src/mcp.js';
+import { fetchSampleCatalog, pullSampleCli, formatCatalogTable, DEFAULT_SHOWCASE_URL } from '../src/samples.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function getCliVersion() {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
+    return pkg.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
 
 const HELP = `
 Tessera CLI: Developer tools for the Tessera High-Res Voxel Fantasy Console
 
 Usage:
-  tessera init <directory>        Scaffold a new Tessera cart project
+  tessera init <directory>        Scaffold a new Tessera cart project (--template <id>)
+  tessera samples                 List playable sample carts from the Tessera Showcase
+  tessera pull <id> [target]      Download a showcase sample cart (.tess, --png, or --project)
   tessera dev [path]              Start local development server with hot-reload
   tessera pack <cart> [label]     Pack .tess cart into a .tess.png picture cart
   tessera unpack <picture-cart>   Extract .tess text from a .tess.png picture cart
@@ -25,9 +39,14 @@ Usage:
   tessera mcp                     Start Model Context Protocol (MCP) server over stdio
 
 Options:
-  -o, --out <path>                Specify output file path
+  -o, --out <path>                Specify output file or directory path
   -p, --port <number>             Dev server port (default: 3000)
   -h, --host <address>            Dev server host address (default: 0.0.0.0)
+  -t, --template <id>             Start from a showcase sample cart (used with init)
+  --project [dir]                 Unpack pulled sample into an editable cart project
+  --png                           Download steganographic .tess.png picture cart (with pull)
+  --json                          Output sample catalog as JSON (with samples)
+  --registry <url>                Override showcase catalog base URL
   --name <name>                   Specify cart / model identifier
   --pivot <x,y,z>                 Specify model pivot point
   --pal <cart.tess>               Conform models to an existing cart palette
@@ -47,13 +66,25 @@ async function main() {
   }
 
   if (cmd === '--version' || cmd === '-v' || cmd === 'version') {
-    console.log('tessera 1.0.0');
+    console.log(`tessera v${getCliVersion()}`);
     process.exit(0);
   }
 
   const options = {};
   const positional = [];
-  const flagsWithValue = new Set(['-o', '--out', '-p', '--port', '-h', '--host', '--name', '--pivot', '--label', '--template', '--pal', '--max-colors']);
+  const flagsWithValue = new Set([
+    '-o', '--out',
+    '-p', '--port',
+    '-h', '--host',
+    '-t', '--template',
+    '--project',
+    '--registry',
+    '--name',
+    '--pivot',
+    '--label',
+    '--pal',
+    '--max-colors',
+  ]);
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
@@ -84,7 +115,22 @@ async function main() {
   try {
     switch (cmd) {
       case 'init': {
-        const targetDir = positional[0] || '.';
+        const template = getOption('--template', '-t');
+        const targetDir = positional[0] || (template ? template : '.');
+        if (template) {
+          const baseUrl = getOption('--registry');
+          const res = await pullSampleCli(template, {
+            project: targetDir,
+            baseUrl,
+          });
+          console.log(`✓ Scaffolded Tessera project from sample "${res.entry.title}" (${res.entry.id}) in ${res.dir}`);
+          console.log(`  Cart ID: ${res.id}${res.modelsCount ? `, Models: ${res.modelsCount}` : ''}${res.hasMusic ? ', Tracker music included' : ''}`);
+          console.log('  Next steps:');
+          console.log(`    cd ${path.relative(process.cwd(), res.dir) || '.'}`);
+          console.log('    npm install');
+          console.log('    npm run dev');
+          break;
+        }
         const name = getOption('--name');
         const res = initProject(targetDir, { name });
         console.log(`✓ Scaffolded Tessera project in ${res.dir}`);
@@ -92,6 +138,65 @@ async function main() {
         console.log('  Next steps:');
         console.log(`    cd ${targetDir}`);
         console.log('    tessera dev');
+        break;
+      }
+
+      case 'samples': {
+        const baseUrl = getOption('--registry');
+        const samples = await fetchSampleCatalog({ baseUrl });
+        if (getOption('--json')) {
+          console.log(JSON.stringify(samples, null, 2));
+          break;
+        }
+        console.log(`\nTessera Showcase Samples (${baseUrl || process.env.TESSERA_SHOWCASE_URL || DEFAULT_SHOWCASE_URL}):\n`);
+        console.log(formatCatalogTable(samples));
+        console.log('\nDownload a cart:');
+        console.log('  tessera pull <id>                  Download <id>.tess');
+        console.log('  tessera pull <id> --png            Download <id>.tess.png picture cart');
+        console.log('  tessera pull <id> --project [dir]  Unpack into an editable cart project\n');
+        break;
+      }
+
+      case 'pull': {
+        let sampleId = positional[0];
+        let projectOpt = getOption('--project');
+        let targetOut = getOption('--out', '-o') || positional[1];
+
+        // Handle "tessera pull --project bramblecourt" gracefully
+        if (!sampleId && typeof projectOpt === 'string') {
+          sampleId = projectOpt;
+          projectOpt = true;
+        }
+
+        if (!sampleId) {
+          console.error('Error: specify a sample cart ID (e.g. tessera pull bramblecourt). Run "tessera samples" to list available carts.');
+          process.exit(1);
+        }
+
+        const baseUrl = getOption('--registry');
+        const png = Boolean(getOption('--png'));
+        const res = await pullSampleCli(sampleId, {
+          baseUrl,
+          png,
+          project: projectOpt,
+          out: targetOut,
+        });
+
+        if (res.mode === 'project') {
+          const relDir = path.relative(process.cwd(), res.dir) || '.';
+          console.log(`✓ Unpacked "${res.entry.title}" (${res.entry.id}) into project ${res.dir}`);
+          console.log(`  Files: tessera.json, src/main.lua${res.modelsCount ? `, ${res.modelsCount} model(s)` : ''}${res.hasSfx ? ', assets/sfx.txt' : ''}${res.hasMusic ? ', assets/music.txt' : ''}`);
+          console.log('  Next steps:');
+          console.log(`    cd ${relDir}`);
+          console.log('    npm install');
+          console.log('    npm run dev');
+        } else {
+          const relOut = path.relative(process.cwd(), res.outputPath) || res.outputPath;
+          console.log(`✓ Downloaded "${res.entry.title}" (${Math.max(1, Math.ceil(res.fileSize / 1024))} KiB) -> ${res.outputPath}`);
+          if (res.mode === 'cart') {
+            console.log(`  Run it locally: tessera dev ${relOut}`);
+          }
+        }
         break;
       }
 
@@ -158,7 +263,6 @@ async function main() {
         break;
       }
 
-
       case 'export': {
         let cartPath = positional[0];
         if (!cartPath) {
@@ -176,8 +280,7 @@ async function main() {
         break;
       }
 
-      case 'check':
-      case 'validate': {
+      case 'check': {
         let cartPath = positional[0];
         if (!cartPath) {
           if (fs.existsSync(path.resolve(process.cwd(), "tessera.json"))) {
@@ -187,10 +290,11 @@ async function main() {
             process.exit(1);
           }
         }
-        console.log(`Checking ${cartPath}...`);
-        const res = await checkCartCli(cartPath);
+        const res = checkCartCli(cartPath);
         if (res.ok) {
-          console.log(`✓ Cart check passed: id="${res.parsed?.meta?.id || "unknown"}", title="${res.parsed?.meta?.title || "untitled"}"`);
+          console.log(`✓ Cart check passed: ${res.parsed.meta?.title || cartPath}`);
+          console.log(`  Lua lines: ${res.parsed.lua.split('\n').length}, Models: ${res.parsed.models.length}, Palette overrides: ${res.parsed.palette.size}`);
+          for (const warn of res.warnings) console.warn(`  ⚠ Warning: ${warn}`);
         } else {
           console.error(`✗ Cart check failed:`);
           for (const err of res.errors) console.error(`  - ${err}`);
