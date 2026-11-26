@@ -256,3 +256,132 @@ export async function createPictureCart(cartText, frameInput, meta) {
   const packed = await packCart(cartText, label);
   return encodePng(packed, W, H);
 }
+
+/**
+ * Area-averaged downscale of arbitrary source RGBA into a target rectangle inside dst.
+ */
+function blitRect(dst, dstW, dstH, dstX, dstY, boxW, boxH, srcRgba, srcW, srcH) {
+  const targetAspect = boxW / boxH;
+  const srcAspect = srcW / srcH;
+
+  let cropX = 0;
+  let cropY = 0;
+  let cropW = srcW;
+  let cropH = srcH;
+
+  if (Math.abs(srcAspect - targetAspect) > 0.01) {
+    if (srcAspect > targetAspect) {
+      cropW = Math.round(srcH * targetAspect);
+      cropX = Math.floor((srcW - cropW) / 2);
+    } else {
+      cropH = Math.round(srcW / targetAspect);
+      cropY = Math.floor((srcH - cropH) / 2);
+    }
+  }
+
+  for (let y = 0; y < boxH; y++) {
+    const sy0 = cropY + Math.floor((y * cropH) / boxH);
+    const sy1 = Math.max(sy0 + 1, Math.min(srcH, cropY + Math.floor(((y + 1) * cropH) / boxH)));
+    for (let x = 0; x < boxW; x++) {
+      const sx0 = cropX + Math.floor((x * cropW) / boxW);
+      const sx1 = Math.max(sx0 + 1, Math.min(srcW, cropX + Math.floor(((x + 1) * cropW) / boxW)));
+      let r = 0, g = 0, b = 0, count = 0;
+      for (let sy = sy0; sy < sy1; sy++) {
+        for (let sx = sx0; sx < sx1; sx++) {
+          const s = (sy * srcW + sx) * 4;
+          r += srcRgba[s];
+          g += srcRgba[s + 1];
+          b += srcRgba[s + 2];
+          count++;
+        }
+      }
+      const dx = dstX + x;
+      const dy = dstY + y;
+      if (dx >= 0 && dx < dstW && dy >= 0 && dy < dstH) {
+        const d = (dy * dstW + dx) * 4;
+        dst[d] = Math.round(r / count);
+        dst[d + 1] = Math.round(g / count);
+        dst[d + 2] = Math.round(b / count);
+        dst[d + 3] = 255;
+      }
+    }
+  }
+}
+
+function fillBuf(buf, bw, bh, x0, y0, w, h, rgb) {
+  for (let y = Math.max(0, y0); y < Math.min(bh, y0 + h); y++) {
+    for (let x = Math.max(0, x0); x < Math.min(bw, x0 + w); x++) {
+      const o = (y * bw + x) * 4;
+      buf[o] = rgb[0];
+      buf[o + 1] = rgb[1];
+      buf[o + 2] = rgb[2];
+      buf[o + 3] = 255;
+    }
+  }
+}
+
+function textBuf(buf, bw, bh, s, x, y, rgb, scale = 1, maxW = Infinity) {
+  s = String(s ?? '');
+  const fit = Math.floor((maxW + scale) / (6 * scale));
+  if (s.length > fit) s = `${s.slice(0, Math.max(0, fit - 2))}..`;
+  for (let i = 0; i < s.length; i++) {
+    const bits = glyphBits(s[i]);
+    for (let b = 0; b < 35; b++) {
+      if (bits[b]) {
+        fillBuf(buf, bw, bh, x + (i * 6 + (b % 5)) * scale, y + Math.floor(b / 5) * scale, scale, scale, rgb);
+      }
+    }
+  }
+}
+
+/**
+ * Stitch an array of { rgba, width, height, label } frames into a crisp dark-slate contact sheet PNG.
+ */
+export async function composeContactSheet(tiles, options = {}) {
+  const count = tiles.length;
+  if (count === 0) throw new Error('composeContactSheet: no tiles provided');
+
+  const cols = options.cols || (count <= 2 ? count : count <= 4 ? 2 : 3);
+  const rows = Math.ceil(count / cols);
+  const tileW = options.tileW || (cols >= 3 ? 320 : 384);
+  const tileH = options.tileH || Math.round((tileW * 9) / 16);
+  const pad = options.padding ?? 8;
+  const labelH = 18;
+  const headerH = options.title ? 28 : 0;
+
+  const outW = pad + cols * (tileW + pad);
+  const outH = headerH + pad + rows * (tileH + labelH + pad);
+  const buf = new Uint8ClampedArray(outW * outH * 4);
+
+  fillBuf(buf, outW, outH, 0, 0, outW, outH, SLATE);
+
+  if (options.title) {
+    fillBuf(buf, outW, outH, 0, 0, outW, headerH, SLATE_LO);
+    fillBuf(buf, outW, outH, 0, headerH - 1, outW, 1, SLATE_HI);
+    // Tiny mosaic accent
+    for (let i = 0; i < 5; i++) {
+      fillBuf(buf, outW, outH, pad + i * 6, 11, 5, 5, TILES[i % TILES.length]);
+    }
+    textBuf(buf, outW, outH, options.title, pad + 36, 10, INK, 1, outW - 140);
+    if (options.subtitle) {
+      const sub = String(options.subtitle);
+      const sw = sub.length * 6;
+      textBuf(buf, outW, outH, sub, Math.max(pad + 120, outW - pad - sw), 10, INK_DIM, 1, outW - 120);
+    }
+  }
+
+  for (let i = 0; i < count; i++) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = pad + col * (tileW + pad);
+    const y = headerH + pad + row * (tileH + labelH + pad);
+
+    fillBuf(buf, outW, outH, x - 1, y - 1, tileW + 2, tileH + labelH + 2, SLATE_HI);
+    fillBuf(buf, outW, outH, x, y, tileW, labelH, SLATE_LO);
+    textBuf(buf, outW, outH, tiles[i].label || `FRAME ${i + 1}`, x + 6, y + 6, INK, 1, tileW - 12);
+    blitRect(buf, outW, outH, x, y + labelH, tileW, tileH, tiles[i].rgba, tiles[i].width, tiles[i].height);
+  }
+
+  const pngBytes = await encodePng(buf, outW, outH);
+  return { pngBytes, width: outW, height: outH };
+}

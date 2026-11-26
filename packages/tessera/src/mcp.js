@@ -10,7 +10,7 @@ import { exportHtmlCli } from './export.js';
 import { checkCartCli, checkCartRuntimeCli } from './check.js';
 import { parseVox, convertMultiVox } from './cart/vox.js';
 import { fetchSampleCatalog, downloadSampleCart, pullSampleCli, formatCatalogTable } from './samples.js';
-import { renderCartPreview } from './preview.js';
+import { renderCartPreview, renderModelPreview } from './preview.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -186,8 +186,26 @@ const TOOLS = [
         frames: { type: 'number', description: 'Initial settle frames to render before sending keys or capturing screenshot (default: 4; ~0.13s game time per frame at speed=4).' },
         keys: { type: 'string', description: 'Optional comma-separated key inputs run after initial frames, e.g. "Space:2,ArrowRight:6" (each step holds the key for N rendered frames at ~4 sim ticks/frame, followed by 1 settle frame).' },
         quality: { type: 'string', enum: ['standard', 'hq'], description: 'Optional render quality override ("standard" or "hq").' },
+        filmstrip: { type: ['boolean', 'number'], description: 'Set true (4 frames) or a number 2..6 to capture a labeled multi-frame contact sheet showing motion/animation across frames in a single call.' },
+        filmstripStep: { type: 'number', description: 'Frames between filmstrip captures when keys is not specified (default: 3).' },
         outputPath: { type: 'string', description: 'Optional path to save the rendered PNG screenshot to disk (alias: output).' }
       }
+    }
+  },
+  {
+    name: 'tessera_preview_model',
+    description: 'Render a 4-angle studio turntable contact sheet (0°, 90°, 180°, 270°) of a standalone .txt voxel model, .vox file, or named model inside a cart/project so you can inspect voxel silhouettes and shading before placing them in a scene.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Path to a .txt model file, .vox file, .tess cart, or project directory.' },
+        palettePath: { type: 'string', description: 'Optional path to assets/palette.txt or .tess cart (auto-detected for .txt models inside a project).' },
+        modelId: { type: 'string', description: 'Optional model ID when inspecting a .tess cart or project directory.' },
+        frame: { type: 'number', description: 'Animation frame index to render (default: 0).' },
+        quality: { type: 'string', enum: ['standard', 'hq'], description: 'Render quality (default: "hq").' },
+        outputPath: { type: 'string', description: 'Optional path to save the rendered 4-angle PNG contact sheet (alias: output).' }
+      },
+      required: ['path']
     }
   },
   {
@@ -315,7 +333,7 @@ export function getPromptResult(name, args = {}) {
                 '2. Optionally call `tessera_list_samples` and `tessera_pull_sample` (inspectOnly: true) on a small sample to reference idioms.',
                 `3. Call \`tessera_init_cart\` in "${dir}" to scaffold the project.`,
                 '4. Author a rich cohesive palette (`assets/palette.txt`), persistent 3D voxel environment (`_init`), responsive gameplay loop (`_update` at 30Hz), dynamic voxels + crisp HUD (`_draw`), and optional SFX/music (`assets/sfx.txt`, `assets/music.txt`). Enable `quality("hq")` for soft shadows & AO when appropriate.',
-                '5. Call `tessera_render_preview` to boot the game in headless WebGL2 and visually inspect the rendered PNG screenshot. Also test gameplay inputs with `keys` (e.g. `"ArrowRight:12,Space:4"`).',
+                '5. Call `tessera_preview_model` to inspect custom `.txt`/`.vox` models from 4 studio angles, then call `tessera_render_preview` (with `keys` and/or `filmstrip: true`) to verify motion, gameplay inputs, and visual framing.',
                 '6. Critique your own screenshot (camera framing, silhouette readability, lighting contrast, HUD layout), refine the code, and re-run `tessera_render_preview` until it looks great with zero errors.',
                 '7. Finish by calling `tessera_pack_cart` with `autoLabel: true` (emits `.tess` + collector-grade `.tess.png` with live voxel cover art) and `tessera_export_html` (emits standalone playable `.html`).'
               ].join('\n')
@@ -343,7 +361,7 @@ export function getPromptResult(name, args = {}) {
                 `1. Call \`tessera_pull_sample\` with id="${sampleId}" and projectDir="${dir}".`,
                 '2. Call `tessera_render_preview` on the pulled project to see the baseline game.',
                 '3. Read `src/main.lua`, `assets/palette.txt`, and `tessera.json`, then implement the remix (update title/id/palette/mechanics/visuals).',
-                '4. Call `tessera_render_preview` (with gameplay `keys`) to visually verify zero runtime errors and crisp framing.',
+                '4. Call `tessera_preview_model` on any new custom voxel models and `tessera_render_preview` (with gameplay `keys` and `filmstrip: true`) to visually verify motion, zero runtime errors, and crisp framing.',
                 '5. Package with `tessera_pack_cart` (`autoLabel: true`) and `tessera_export_html`.'
               ].join('\n')
             }
@@ -467,6 +485,8 @@ export async function handleToolCall(name, args = {}) {
         frames: args.frames ?? 4,
         keys: args.keys,
         quality: args.quality,
+        filmstrip: args.filmstrip ?? false,
+        filmstripStep: args.filmstripStep,
         out: args.outputPath || args.output || null,
         screenshot: true,
       });
@@ -488,6 +508,27 @@ export async function handleToolCall(name, args = {}) {
       if (res.consoleLogs?.length) {
         summary.push(`- Console Logs (printh):\n${res.consoleLogs.slice(-10).map((l) => `  - ${l}`).join('\n')}`);
       }
+      return {
+        text: summary.join('\n'),
+        images: res.pngBase64 ? [{ data: res.pngBase64, mimeType: 'image/png' }] : [],
+        isError: !res.ok,
+      };
+    }
+
+    case 'tessera_preview_model': {
+      const target = resolvePathArg(args, '.');
+      const res = await renderModelPreview(target, {
+        palettePath: args.palettePath || args.palette || null,
+        modelId: args.modelId || args.id || null,
+        frame: args.frame ?? 0,
+        quality: args.quality || 'hq',
+        out: args.outputPath || args.output || null,
+      });
+      const summary = [
+        `✓ Rendered 4-angle turntable for model "${res.model.id}" (${res.model.w}x${res.model.d}x${res.model.h}, ${res.model.voxels} voxels, frame ${res.model.renderedFrame + 1}/${res.model.frames})`,
+        `- Sheet: ${res.width}x${res.height} in ${res.elapsedMs} ms`,
+      ];
+      if (res.outputPath) summary.push(`- Saved PNG: ${res.outputPath}`);
       return {
         text: summary.join('\n'),
         images: res.pngBase64 ? [{ data: res.pngBase64, mimeType: 'image/png' }] : [],

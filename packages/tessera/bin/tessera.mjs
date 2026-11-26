@@ -8,7 +8,7 @@ import { packCartCli, unpackCartCli } from '../src/pack.js';
 import { importVoxCli } from '../src/vox.js';
 import { exportHtmlCli } from '../src/export.js';
 import { checkCartCli, checkCartRuntimeCli } from '../src/check.js';
-import { renderCartPreview } from '../src/preview.js';
+import { renderCartPreview, renderModelPreview } from '../src/preview.js';
 import { startDevCli } from '../src/dev.js';
 import { startMcpServer } from '../src/mcp.js';
 import { fetchSampleCatalog, pullSampleCli, formatCatalogTable, DEFAULT_SHOWCASE_URL } from '../src/samples.js';
@@ -37,7 +37,8 @@ Usage:
   tessera vox <file.vox...>       Convert MagicaVoxel .vox model(s) to Tessera format
   tessera export <cart>           Export offline standalone single-file .html runner
   tessera check [cart]            Validate cart syntax (--runtime boots headless WebGL2)
-  tessera preview [cart]          Render a headless 768x432 PNG preview screenshot
+  tessera preview [cart]          Render headless preview PNG (--filmstrip for multi-frame sheet)
+  tessera preview-model <model>   Render a 4-angle studio turntable PNG of a .txt/.vox model
   tessera mcp                     Start Model Context Protocol (MCP) server over stdio
 
 Options:
@@ -53,6 +54,9 @@ Options:
   --keys <spec>                   Scripted inputs for preview/check (e.g. "ArrowRight:8,Space:3")
   --quality <standard|hq>         Override render quality for preview
   --auto-label                    Render headless cover art automatically during pack
+  --filmstrip [count]             Capture a multi-frame contact sheet (2..6 frames, default 4)
+  --model-id <id>                 Model ID when previewing a model inside a .tess cart
+  --frame <number>                Animation frame index for preview-model (default: 0)
   --registry <url>                Override showcase catalog base URL
   --name <name>                   Specify cart / model identifier
   --pivot <x,y,z>                 Specify model pivot point
@@ -94,6 +98,8 @@ async function main() {
     '--frames',
     '--keys',
     '--quality',
+    '--model-id',
+    '--frame',
   ]);
 
   for (let i = 1; i < args.length; i++) {
@@ -342,10 +348,13 @@ async function main() {
           }
         }
         const outPath = getOption('--out', '-o') || 'preview.png';
+        const filmstripOpt = getOption('--filmstrip');
+        const filmstrip = filmstripOpt === true ? 4 : filmstripOpt ? Number(filmstripOpt) : false;
         const res = await renderCartPreview(cartPath, {
           frames: getOption('--frames') ? Number(getOption('--frames')) : 4,
           keys: getOption('--keys'),
           quality: getOption('--quality'),
+          filmstrip,
           out: outPath,
           screenshot: true,
         });
@@ -357,6 +366,24 @@ async function main() {
           for (const ce of res.consoleErrors || []) console.error(`  - ${ce}`);
           process.exit(1);
         }
+        break;
+      }
+
+      case 'preview-model': {
+        const modelPath = positional[0];
+        if (!modelPath) {
+          console.error('Error: specify a .txt/.vox model or .tess cart path (e.g. tessera preview-model models/hero.txt)');
+          process.exit(1);
+        }
+        const outPath = getOption('--out', '-o') || 'model-preview.png';
+        const res = await renderModelPreview(modelPath, {
+          palettePath: getOption('--pal') || null,
+          modelId: getOption('--model-id') || null,
+          frame: getOption('--frame') ? Number(getOption('--frame')) : 0,
+          quality: getOption('--quality') || 'hq',
+          out: outPath,
+        });
+        console.log(`✓ Rendered 4-angle model turntable for "${res.model.id}" (${res.model.w}x${res.model.d}x${res.model.h}, ${res.model.voxels} voxels) -> ${res.outputPath} (${res.elapsedMs} ms)`);
         break;
       }
 

@@ -120,6 +120,44 @@ test('MCP Visual Preview & Headless Runtime Check (when Chromium is available)',
     assert.ok(autoPack.text.includes('auto-preview'), 'autoLabel should render live headless cover art');
     assert.equal(autoPack.images?.length, 1, 'autoLabel pack should return inline PNG image');
 
+    // 1c. Filmstrip contact sheet & 4-angle model turntable preview
+    const filmstripPng = path.join(tmpDir, 'filmstrip.png');
+    const filmRes = await handleToolCall('tessera_render_preview', {
+      path: gameDir,
+      frames: 2,
+      keys: 'ArrowRight:4',
+      filmstrip: 4,
+      outputPath: filmstripPng,
+    });
+    assert.equal(Boolean(filmRes.isError), false, `Expected clean filmstrip, got: ${filmRes.text}`);
+    assert.equal(filmRes.images?.length, 1, 'Filmstrip should return 1 stitched PNG image');
+    assert.ok(fs.existsSync(filmstripPng), 'Filmstrip PNG should be saved');
+
+    const sampleModelPath = path.join(gameDir, 'models', 'beacon.txt');
+    fs.writeFileSync(sampleModelPath, [
+      'beacon 3x3x3',
+      'c9 c9 c9',
+      'c9 ca c9',
+      'c9 c9 c9',
+      '',
+      '.. c9 ..',
+      'c9 cb c9',
+      '.. c9 ..',
+      '',
+      '.. .. ..',
+      '.. d1 ..',
+      '.. .. ..',
+    ].join('\n'));
+    const modelPng = path.join(tmpDir, 'model-turntable.png');
+    const modelRes = await handleToolCall('tessera_preview_model', {
+      path: sampleModelPath,
+      outputPath: modelPng,
+    });
+    assert.equal(Boolean(modelRes.isError), false, `Expected clean model turntable, got: ${modelRes.text}`);
+    assert.ok(modelRes.text.includes('4-angle turntable'), 'Should describe 4-angle turntable');
+    assert.equal(modelRes.images?.length, 1, 'Model turntable should return 1 PNG image');
+    assert.ok(fs.existsSync(modelPng), 'Model turntable PNG should be saved');
+
     // 2. Runtime check catches a real Lua runtime error
     const brokenCart = path.join(tmpDir, 'broken-runtime.tess');
     fs.writeFileSync(
@@ -192,6 +230,7 @@ test('MCP Protocol JSON-RPC Stdio Handshake, Tools, Prompts & Tool Calling', asy
       'tessera_pull_sample',
       'tessera_check_cart',
       'tessera_render_preview',
+      'tessera_preview_model',
       'tessera_pack_cart',
       'tessera_export_html',
       'tessera_api_docs',
