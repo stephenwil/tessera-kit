@@ -24,7 +24,8 @@ npx @stephenwil/tessera@latest init my-game [--template <id>]  # Scaffold a new 
 npx @stephenwil/tessera@latest samples                         # List showcase sample carts
 npx @stephenwil/tessera@latest pull <id> [--project [dir]]     # Download .tess, --png, or unpack project
 npx @stephenwil/tessera@latest dev [path]                      # Live-reload dev server (--port, --host)
-npx @stephenwil/tessera@latest check [path]                    # Validate cart syntax & manifest
+npx @stephenwil/tessera@latest check [path] [--runtime]        # Validate syntax (+ headless WebGL2 boot)
+npx @stephenwil/tessera@latest preview [path] [-o shot.png]    # Render 768x432 headless PNG screenshot
 npx @stephenwil/tessera@latest pack [path]                     # Build .tess & steganographic .tess.png
 npx @stephenwil/tessera@latest unpack <cart.tess.png>          # Unpack picture cart to plain text
 npx @stephenwil/tessera@latest vox <files...>                  # Convert MagicaVoxel .vox models
@@ -49,7 +50,7 @@ Add to your MCP client configuration (Claude Desktop, Cursor, T3 Code, etc.):
 }
 ```
 
-Exposes 8 tools: `tessera_init_cart`, `tessera_check_cart`, `tessera_assemble_cart`, `tessera_pack_cart`, `tessera_export_html`, `tessera_inspect_vox`, `tessera_check_palette_budget`, and `tessera_api_docs`.
+Exposes **11 tools** (including `tessera_render_preview` returning native PNG screenshots, `tessera_list_samples`, `tessera_pull_sample`, and headless `runtime: true` checks) plus **3 guided MCP prompts** (`create-voxel-game`, `remix-showcase-cart`, `visual-polish-pass`).
 
 ## Sample Carts
 

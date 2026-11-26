@@ -262,18 +262,23 @@ Or using the dedicated package:
 }
 ```
 
-### Available MCP Tools
+### Available MCP Tools (11) & Prompts (3)
 
 | Tool | Parameters | Description |
 |---|---|---|
-| `tessera_init_cart` | `directory`, `name`, `title`, `author` | Scaffolds a new cart project with manifest, starter loop, palette, and VS Code typings. |
-| `tessera_check_cart` | `path` | Fast validation of cart structure, balanced Lua blocks, and manifest schema. |
-| `tessera_assemble_cart` | `projectDir` | Assembles multi-file Lua scripts and models into a `.tess` cart. |
+| `tessera_api_docs` | `topic` (`all`, `map`, `draw`, `collision`, `camera`, `hud`, `input`, `audio`, `math`, `cart_format`) | Retrieves live, accurate Lua API signatures and `.tess`/model/music format specs into context. |
+| `tessera_init_cart` | `directory`, `name`, `title`, `author`, `template` | Scaffolds a new cart project (or unpacks any showcase `template`). |
+| `tessera_list_samples` | `baseUrl` | Lists all playable sample carts from the live Tessera Showcase catalog. |
+| `tessera_pull_sample` | `id`, `projectDir`, `outputPath`, `png`, `inspectOnly` | Downloads, unpacks into a project, or returns source snippets of a showcase cart for study. |
+| `tessera_check_cart` | `path`, `runtime`, `frames`, `keys` | Validates manifest, Lua blocks, API typos, and optional headless WebGL2 runtime boot (`runtime: true`). |
+| `tessera_render_preview` | `path`, `frames`, `keys`, `quality`, `outputPath` | Boots the cart in headless WebGL2 Chromium, runs optional key inputs, and returns a native 768×432 PNG screenshot image so multimodal agents can visually inspect and iterate on their game. |
+| `tessera_assemble_cart` | `projectDir` | Assembles multi-file Lua scripts, models, palette, SFX, and tracker music into a `.tess` cart. |
 | `tessera_pack_cart` | `cartPath`, `outputPath`, `labelPath` | Packs `.tess` into a shareable steganographic `.tess.png` picture cart. |
 | `tessera_export_html` | `cartPath`, `outputPath` | Exports a self-contained offline single-file `.html` game runner. |
 | `tessera_inspect_vox` | `voxPath` | Inspects MagicaVoxel `.vox` dimensions, models, frame count, and color palette. |
-| `tessera_check_palette_budget` | `projectDir`, `maxColors` | Scans all models, deduplicates colors, and verifies compliance with the ≤ 255 palette limit. |
-| `tessera_api_docs` | `topic` (`all`, `map`, `draw`, `collision`, `camera`, `hud`, `input`, `audio`, `math`) | Retrieves live, accurate Lua API signatures and notes directly into agent context. |
+| `tessera_check_palette_budget` | `projectDir`, `maxColors` | Scans `.vox` models, deduplicates colors, and verifies compliance with the ≤ 255 palette limit. |
+
+Built-in MCP Prompts (`prompts/list`): `create-voxel-game`, `remix-showcase-cart`, and `visual-polish-pass`.
 
 ---
 

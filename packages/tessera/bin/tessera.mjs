@@ -7,7 +7,8 @@ import { initProject } from '../src/init.js';
 import { packCartCli, unpackCartCli } from '../src/pack.js';
 import { importVoxCli } from '../src/vox.js';
 import { exportHtmlCli } from '../src/export.js';
-import { checkCartCli } from '../src/check.js';
+import { checkCartCli, checkCartRuntimeCli } from '../src/check.js';
+import { renderCartPreview } from '../src/preview.js';
 import { startDevCli } from '../src/dev.js';
 import { startMcpServer } from '../src/mcp.js';
 import { fetchSampleCatalog, pullSampleCli, formatCatalogTable, DEFAULT_SHOWCASE_URL } from '../src/samples.js';
@@ -35,7 +36,8 @@ Usage:
   tessera unpack <picture-cart>   Extract .tess text from a .tess.png picture cart
   tessera vox <file.vox...>       Convert MagicaVoxel .vox model(s) to Tessera format
   tessera export <cart>           Export offline standalone single-file .html runner
-  tessera check <cart>            Validate cart syntax and run headless frame tests
+  tessera check [cart]            Validate cart syntax (--runtime boots headless WebGL2)
+  tessera preview [cart]          Render a headless 768x432 PNG preview screenshot
   tessera mcp                     Start Model Context Protocol (MCP) server over stdio
 
 Options:
@@ -46,6 +48,10 @@ Options:
   --project [dir]                 Unpack pulled sample into an editable cart project
   --png                           Download steganographic .tess.png picture cart (with pull)
   --json                          Output sample catalog as JSON (with samples)
+  --runtime                       Boot cart in headless Chromium during check
+  --frames <number>               Frames to step before preview screenshot (default: 4)
+  --keys <spec>                   Scripted inputs for preview/check (e.g. "ArrowRight:8,Space:3")
+  --quality <standard|hq>         Override render quality for preview
   --registry <url>                Override showcase catalog base URL
   --name <name>                   Specify cart / model identifier
   --pivot <x,y,z>                 Specify model pivot point
@@ -84,6 +90,9 @@ async function main() {
     '--label',
     '--pal',
     '--max-colors',
+    '--frames',
+    '--keys',
+    '--quality',
   ]);
 
   for (let i = 1; i < args.length; i++) {
@@ -290,14 +299,54 @@ async function main() {
             process.exit(1);
           }
         }
-        const res = checkCartCli(cartPath);
+        const useRuntime = Boolean(getOption('--runtime'));
+        const res = useRuntime
+          ? await checkCartRuntimeCli(cartPath, {
+              frames: getOption('--frames') ? Number(getOption('--frames')) : 3,
+              keys: getOption('--keys'),
+              quality: getOption('--quality'),
+            })
+          : checkCartCli(cartPath);
         if (res.ok) {
           console.log(`✓ Cart check passed: ${res.parsed.meta?.title || cartPath}`);
           console.log(`  Lua lines: ${res.parsed.lua.split('\n').length}, Models: ${res.parsed.models.length}, Palette overrides: ${res.parsed.palette.size}`);
+          if (res.runtime) {
+            console.log(`  Runtime: ✓ Booted cleanly (${res.runtime.frames} frames in ${res.runtime.elapsedMs} ms)`);
+          }
           for (const warn of res.warnings) console.warn(`  ⚠ Warning: ${warn}`);
         } else {
           console.error(`✗ Cart check failed:`);
           for (const err of res.errors) console.error(`  - ${err}`);
+          for (const warn of res.warnings) console.warn(`  ⚠ Warning: ${warn}`);
+          process.exit(1);
+        }
+        break;
+      }
+
+      case 'preview': {
+        let cartPath = positional[0];
+        if (!cartPath) {
+          if (fs.existsSync(path.resolve(process.cwd(), "tessera.json"))) {
+            cartPath = ".";
+          } else {
+            console.error('Error: specify cart path (e.g. tessera preview cart.tess -o preview.png)');
+            process.exit(1);
+          }
+        }
+        const outPath = getOption('--out', '-o') || 'preview.png';
+        const res = await renderCartPreview(cartPath, {
+          frames: getOption('--frames') ? Number(getOption('--frames')) : 4,
+          keys: getOption('--keys'),
+          quality: getOption('--quality'),
+          out: outPath,
+          screenshot: true,
+        });
+        if (res.ok) {
+          console.log(`✓ Rendered preview: ${res.outputPath} (${res.width}x${res.height}, ${res.frames} frames in ${res.elapsedMs} ms)`);
+        } else {
+          console.error(`✗ Preview hit runtime error (state=${res.state}, saved screenshot to ${res.outputPath}):`);
+          if (res.errorText) console.error(String(res.errorText).split('\nR to restart')[0].trim());
+          for (const ce of res.consoleErrors || []) console.error(`  - ${ce}`);
           process.exit(1);
         }
         break;

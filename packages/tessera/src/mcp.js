@@ -1,16 +1,30 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import { fileURLToPath } from 'node:url';
 
 import { initProject } from './init.js';
 import { assembleProject } from './project.js';
-import { packCartCli, unpackCartCli } from './pack.js';
+import { packCartCli } from './pack.js';
 import { exportHtmlCli } from './export.js';
-import { checkCartCli } from './check.js';
+import { checkCartCli, checkCartRuntimeCli } from './check.js';
 import { parseVox, convertMultiVox } from './cart/vox.js';
+import { fetchSampleCatalog, downloadSampleCart, pullSampleCli, formatCatalogTable } from './samples.js';
+import { renderCartPreview } from './preview.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function getServerVersion() {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
+    return pkg.version || '0.1.6';
+  } catch {
+    return '0.1.6';
+  }
+}
 
 const API_DOCS = {
-  map: `Map Layer API (persistent 256x256x128 world volume):
+  map: `Map Layer API (persistent 256x256x128 world volume, x=east, y=north, z=up):
 - mset(x, y, z, c): Set persistent voxel at (x, y, z) with palette index c (1..255, 0=empty)
 - mget(x, y, z): Get persistent voxel palette index at (x, y, z) (0 outside bounds)
 - mbox(x0, y0, z0, x1, y1, z1, c): Draw solid filled box in persistent map volume
@@ -25,7 +39,7 @@ const API_DOCS = {
 - box(x0, y0, z0, x1, y1, z1, c, [hollow]): Draw dynamic filled or hollow 3D box
 - sphere(x, y, z, r, c): Draw solid voxel sphere of radius r
 - line3d(x0, y0, z0, x1, y1, z1, c): Draw 3D Bresenham voxel line
-- model(id, x, y, z, [rot], [flip], [frame]): Draw animated voxel model instance
+- model(id, x, y, z, [rot], [flip], [frame]): Draw animated voxel model instance (rot 0..3 = 90deg steps)
 - particle(x, y, z, c, [life]): Spawn transient voxel particle (default life 1.0)
 - newmodel(id, w, d, h, [frames]): Define a runtime procedural model (w,d <= 256; h <= 128)
 - mpset(id, x, y, z, c, [frame]): Set a voxel inside a model
@@ -44,10 +58,10 @@ const API_DOCS = {
 - sun(dx, dy, dz, [strength]): Set directional sun vector and shadow strength (default 1)
 - sky(top, bottom): Set sky gradient using two palette indices
 - fog(c, density): Set distance fog palette index and density (0 disables)
-- pal(i, r, g, b): Dynamically modify RGB (0..255) for palette slot i (0..255)
+- pal(i, r, g, b): Dynamically modify RGB (0..255) for palette slot i (1..255)
 - palt(): Reset runtime palette overrides back to cart palette
 - pswap([a], [b]): Remap draw color a -> b (call with no args to reset all remaps)
-- quality([preset]): Get or set render quality ("standard" or "hq")`,
+- quality([preset]): Get or set render quality ("standard" or "hq" for native DPR + soft AO + soft shadows)`,
 
   hud: `2D HUD Overlay Canvas (768x432 screen resolution, cleared every frame):
 - print(str, x, y, [c], [outline], [scale]): Draw 5x7 bitmap text (6px advance, outline defaults true)
@@ -81,31 +95,95 @@ const API_DOCS = {
 - stat(n): Diagnostics (0=fps, 1=updateMs, 2=drawMs, 3=compositeMs, 4=lastInputSource)
 - dset(key, val): Save numeric value to cart storage
 - dget(key): Read numeric value from cart storage (0 if unset)
-- printh(str): Log debug string to host console`
+- printh(str): Log debug string to host console`,
+
+  cart_format: `Tessera Project & Cart Format (tessera.json -> tessera cart v1):
+- tessera.json fields:
+  id, title, author, version, players (1..4), quality ("standard" | "hq"),
+  lua: ["src/main.lua"], palette: "assets/palette.txt",
+  models: { "hero": "models/hero.txt" | "models/hero.vox" },
+  sfx: "assets/sfx.txt", music: "assets/music.txt"
+- Palette file (assets/palette.txt): "<index> <rrggbb>" (indices 1..255; 0 is air)
+- Text Model file (models/<id>.txt):
+  <id> <w>x<d>x<h> [frames=N] [pivot=px,py,pz]
+  Z-slices from z=0..h-1 separated by blank lines; each slice has d rows of w tokens (".." = air, 2-digit hex palette index e.g. "0a"). Multiple frames separated by a line containing "frame".
+- SFX file (assets/sfx.txt): "<id> <square|triangle|saw|noise> <f0>><f1> <dur> <vol>"
+- Music tracker file (assets/music.txt):
+  inst <id> wave=<sq25|sq50|sq12|tri|saw|nse> [adsr=a,d,s,r]
+  pat <id> speed=<ticks> rows=<N>
+  00 | C-4 0 vA | ... | ... | ...
+  song <id> [title="..."] speed=<ticks> [loop=0]
+  order 0 1 0 2
+- Lifecycle callbacks in Lua 5.4: _init(), _update() (fixed 30 Hz), _draw()`
 };
 
 const TOOLS = [
   {
     name: 'tessera_init_cart',
-    description: 'Scaffold a new Tessera High-Res cart project with manifest, Lua loop, palette, and VS Code settings.',
+    description: 'Scaffold a new Tessera High-Res cart project with manifest, Lua loop, palette, and VS Code settings. Optionally start from any playable showcase cart via template.',
     inputSchema: {
       type: 'object',
       properties: {
         directory: { type: 'string', description: 'Directory path where the new cart will be created.' },
         name: { type: 'string', description: 'Identifier for the cart (e.g. "space-miner").' },
         title: { type: 'string', description: 'Display title for the game (e.g. "Space Miner").' },
-        author: { type: 'string', description: 'Creator / author name.' }
+        author: { type: 'string', description: 'Creator / author name.' },
+        template: { type: 'string', description: 'Optional showcase sample cart ID (from tessera_list_samples) to unpack as the starting template.' }
       },
       required: ['directory']
     }
   },
   {
-    name: 'tessera_check_cart',
-    description: 'Validate cart syntax, balanced Lua blocks, manifest configuration, and integrity.',
+    name: 'tessera_list_samples',
+    description: 'List all playable sample carts from the live Tessera Showcase catalog (IDs, titles, genres, sizes, descriptions).',
     inputSchema: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'Path to a .tess file or a project directory containing tessera.json (defaults to ".").' }
+        baseUrl: { type: 'string', description: 'Optional override for the showcase catalog base URL.' }
+      }
+    }
+  },
+  {
+    name: 'tessera_pull_sample',
+    description: 'Download a playable sample cart from the Tessera Showcase, unpack it into an editable project, or inspect its Lua/palette/models as a reference.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Sample cart ID (e.g. "bramblecourt", "moonlitgarden", "prismrelay").' },
+        projectDir: { type: 'string', description: 'Directory path to unpack the sample into an editable tessera.json project.' },
+        outputPath: { type: 'string', description: 'Optional output file path when downloading raw .tess or .tess.png.' },
+        png: { type: 'boolean', description: 'Download the steganographic .tess.png picture cart instead of .tess text.' },
+        inspectOnly: { type: 'boolean', description: 'If true, do not write files; return metadata, palette summary, and Lua code snippet for study.' },
+        maxChars: { type: 'number', description: 'Max characters to return when inspectOnly is true (default: 6000).' },
+        baseUrl: { type: 'string', description: 'Optional override for the showcase catalog base URL.' }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'tessera_check_cart',
+    description: 'Validate cart structure, manifest files, balanced Lua blocks, common API typos, and optionally boot the cart in headless WebGL2 Chromium (runtime: true) to catch real Lua 5.4 syntax and runtime errors.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Path to a .tess file or a project directory containing tessera.json (defaults to ".").' },
+        runtime: { type: 'boolean', description: 'If true, boot the cart in headless Chromium for several frames to catch real Lua 5.4 syntax/runtime errors.' },
+        frames: { type: 'number', description: 'Number of frames to step when runtime is true (default: 3).' },
+        keys: { type: 'string', description: 'Optional scripted key inputs during runtime check, e.g. "ArrowRight:10,Space:3".' }
+      }
+    }
+  },
+  {
+    name: 'tessera_render_preview',
+    description: 'Boot a Tessera cart in headless WebGL2 Chromium, step frames and optional scripted key inputs, verify zero Lua/console errors, and return a rendered 768x432 PNG screenshot image so you can visually inspect and iterate on your game.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Path to a .tess file or a project directory containing tessera.json (defaults to ".").' },
+        frames: { type: 'number', description: 'Frames to render before capturing screenshot (default: 4).' },
+        keys: { type: 'string', description: 'Optional comma-separated key inputs to send after initial frames, e.g. "ArrowRight:12,Space:4".' },
+        quality: { type: 'string', enum: ['standard', 'hq'], description: 'Optional render quality override ("standard" or "hq").' },
+        outputPath: { type: 'string', description: 'Optional path to save the rendered PNG screenshot to disk.' }
       }
     }
   },
@@ -166,23 +244,142 @@ const TOOLS = [
   },
   {
     name: 'tessera_api_docs',
-    description: 'Look up API documentation, signatures, and code examples for Tessera High-Res Lua subsystems.',
+    description: 'Look up API documentation, signatures, cart format specs, and code examples for Tessera High-Res Lua subsystems.',
     inputSchema: {
       type: 'object',
       properties: {
         topic: {
           type: 'string',
-          enum: ['all', 'map', 'draw', 'collision', 'camera', 'hud', 'input', 'audio', 'math'],
-          description: 'The API subsystem to query.'
+          enum: ['all', 'map', 'draw', 'collision', 'camera', 'hud', 'input', 'audio', 'math', 'cart_format'],
+          description: 'The API subsystem or format reference to query.'
         }
       }
     }
   }
 ];
 
+const PROMPTS = [
+  {
+    name: 'create-voxel-game',
+    description: 'Guided end-to-end workflow to design, build, visually inspect, and package a new 3D voxel game for Tessera High-Res.',
+    arguments: [
+      { name: 'concept', description: 'Short game idea (e.g. "cozy lighthouse delivery game" or "isometric lava-floor arena")', required: true },
+      { name: 'directory', description: 'Target project directory (default: "./my-tessera-game")', required: false }
+    ]
+  },
+  {
+    name: 'remix-showcase-cart',
+    description: 'Pull a playable Tessera Showcase cart, study how it works, apply a creative remix, verify visually, and package.',
+    arguments: [
+      { name: 'sample_id', description: 'Showcase cart ID (e.g. "bramblecourt", "moonlitgarden", "prismrelay")', required: true },
+      { name: 'twist', description: 'How to remix or transform the game', required: true },
+      { name: 'directory', description: 'Target directory for the remixed project', required: false }
+    ]
+  },
+  {
+    name: 'visual-polish-pass',
+    description: 'Render an existing Tessera cart, critique its camera framing, lighting, palette contrast, voxel depth, and HUD, then improve and re-verify.',
+    arguments: [
+      { name: 'path', description: 'Path to the .tess cart or project directory', required: true }
+    ]
+  }
+];
+
+export function getPromptResult(name, args = {}) {
+  switch (name) {
+    case 'create-voxel-game': {
+      const concept = args.concept || 'an atmospheric isometric voxel arcade game';
+      const dir = args.directory || './my-tessera-game';
+      return {
+        description: `Create a new Tessera High-Res voxel game: ${concept}`,
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: [
+                `Build a complete, polished, playable 3D voxel game for Tessera High-Res in "${dir}" based on this concept: ${concept}.`,
+                '',
+                'Follow this MCP workflow:',
+                '1. Call `tessera_api_docs` (topic: "all") so you use exact Tessera Lua 5.4 APIs (camera, sun, sky, fog, quality("hq"), mbox, sphere, model, collision, audio/music, HUD).',
+                '2. Optionally call `tessera_list_samples` and `tessera_pull_sample` (inspectOnly: true) on a small sample to reference idioms.',
+                `3. Call \`tessera_init_cart\` in "${dir}" to scaffold the project.`,
+                '4. Author a rich cohesive palette (`assets/palette.txt`), persistent 3D voxel environment (`_init`), responsive gameplay loop (`_update` at 30Hz), dynamic voxels + crisp HUD (`_draw`), and optional SFX/music (`assets/sfx.txt`, `assets/music.txt`). Enable `quality("hq")` for soft shadows & AO when appropriate.',
+                '5. Call `tessera_render_preview` to boot the game in headless WebGL2 and visually inspect the rendered PNG screenshot. Also test gameplay inputs with `keys` (e.g. `"ArrowRight:12,Space:4"`).',
+                '6. Critique your own screenshot (camera framing, silhouette readability, lighting contrast, HUD layout), refine the code, and re-run `tessera_render_preview` until it looks great with zero errors.',
+                '7. Finish by calling `tessera_pack_cart` (emits `.tess` + `.tess.png`) and `tessera_export_html` (emits standalone playable `.html`).'
+              ].join('\n')
+            }
+          }
+        ]
+      };
+    }
+
+    case 'remix-showcase-cart': {
+      const sampleId = args.sample_id || 'bramblecourt';
+      const twist = args.twist || 're-theme the biome, palette, and gameplay mechanics';
+      const dir = args.directory || `./${sampleId}-remix`;
+      return {
+        description: `Remix showcase cart "${sampleId}"`,
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: [
+                `Remix the Tessera Showcase cart "${sampleId}" in "${dir}" with this twist: ${twist}.`,
+                '',
+                'Workflow:',
+                `1. Call \`tessera_pull_sample\` with id="${sampleId}" and projectDir="${dir}".`,
+                '2. Call `tessera_render_preview` on the pulled project to see the baseline game.',
+                '3. Read `src/main.lua`, `assets/palette.txt`, and `tessera.json`, then implement the remix (update title/id/palette/mechanics/visuals).',
+                '4. Call `tessera_render_preview` (with gameplay `keys`) to visually verify zero runtime errors and crisp framing.',
+                '5. Package with `tessera_pack_cart` and `tessera_export_html`.'
+              ].join('\n')
+            }
+          }
+        ]
+      };
+    }
+
+    case 'visual-polish-pass': {
+      const target = args.path || '.';
+      return {
+        description: `Visual polish pass for ${target}`,
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: [
+                `Perform a visual polish pass on the Tessera cart at "${target}":`,
+                '1. Call `tessera_render_preview` to capture the current look.',
+                '2. Critique camera zoom/yaw, sun direction, sky/fog palette cohesion, ground/architecture layering, focal contrast, and HUD legibility.',
+                '3. Apply focused visual upgrades (e.g. `quality("hq")`, richer palette shading, height variation, particles, cleaner HUD).',
+                '4. Call `tessera_render_preview` again to confirm the improvement and zero errors.'
+              ].join('\n')
+            }
+          }
+        ]
+      };
+    }
+
+    default:
+      throw new Error(`Unknown prompt: ${name}`);
+  }
+}
+
 export async function handleToolCall(name, args = {}) {
   switch (name) {
     case 'tessera_init_cart': {
+      if (args.template) {
+        const res = await pullSampleCli(args.template, {
+          project: args.directory,
+        });
+        return {
+          text: `Successfully initialized Tessera cart project from showcase template "${res.entry.title}" (${res.entry.id}) in ${res.dir}\n- ID: ${res.id}\n- Title: ${res.title}\n- Models: ${res.modelsCount}\n- SFX: ${res.hasSfx ? 'yes' : 'no'}\n- Music: ${res.hasMusic ? 'yes' : 'no'}`
+        };
+      }
       const res = initProject(args.directory, {
         name: args.name,
         title: args.title,
@@ -193,19 +390,94 @@ export async function handleToolCall(name, args = {}) {
       };
     }
 
+    case 'tessera_list_samples': {
+      const samples = await fetchSampleCatalog({ baseUrl: args.baseUrl });
+      const table = formatCatalogTable(samples);
+      const descs = samples.map((s) => `- ${s.id} (${s.title}): ${s.description || s.genre || ''}`).join('\n');
+      return {
+        text: `Tessera Showcase Samples (${samples.length} carts):\n\n${table}\n\nDescriptions:\n${descs}`
+      };
+    }
+
+    case 'tessera_pull_sample': {
+      if (args.inspectOnly) {
+        const { entry, cartText } = await downloadSampleCart(args.id, { baseUrl: args.baseUrl, png: false });
+        const limit = Math.max(500, Number(args.maxChars) || 6000);
+        const body = cartText.length > limit
+          ? `${cartText.slice(0, limit)}\n\n... [Truncated ${cartText.length - limit} chars; pass projectDir to unpack full source]`
+          : cartText;
+        return {
+          text: `Showcase Sample "${entry.title}" (${entry.id}) — ${entry.genre || 'Cart'}\n${entry.description || ''}\n\n${body}`
+        };
+      }
+      const res = await pullSampleCli(args.id, {
+        baseUrl: args.baseUrl,
+        png: Boolean(args.png),
+        project: args.projectDir || false,
+        out: args.outputPath || null,
+      });
+      if (res.mode === 'project') {
+        return {
+          text: `✓ Unpacked showcase cart "${res.entry.title}" (${res.entry.id}) into ${res.dir}\n- Manifest: tessera.json\n- Entrypoint: src/main.lua\n- Models: ${res.modelsCount}\n- SFX: ${res.hasSfx ? 'assets/sfx.txt' : 'none'}\n- Music: ${res.hasMusic ? 'assets/music.txt' : 'none'}`
+        };
+      }
+      return {
+        text: `✓ Downloaded "${res.entry.title}" (${Math.max(1, Math.ceil(res.fileSize / 1024))} KiB) to ${res.outputPath}`
+      };
+    }
+
     case 'tessera_check_cart': {
       const target = args.path || '.';
-      const res = checkCartCli(target);
+      const res = args.runtime
+        ? await checkCartRuntimeCli(target, { frames: args.frames, keys: args.keys })
+        : checkCartCli(target);
       if (res.ok) {
+        const runtimeLine = res.runtime
+          ? `\n- Runtime: ✓ Booted cleanly (${res.runtime.frames} frames in ${res.runtime.elapsedMs} ms, state=${res.runtime.state})`
+          : '';
         return {
-          text: `✓ Cart check passed!\n- ID: ${res.parsed?.meta?.id || 'unknown'}\n- Title: ${res.parsed?.meta?.title || 'untitled'}\n- Lua lines: ${res.parsed?.lua?.split('\n').length || 0}\n- Warnings: ${res.warnings?.length ? res.warnings.join(', ') : 'none'}`
+          text: `✓ Cart check passed!\n- ID: ${res.parsed?.meta?.id || 'unknown'}\n- Title: ${res.parsed?.meta?.title || 'untitled'}\n- Lua lines: ${res.parsed?.lua?.split('\n').length || 0}\n- Models: ${res.parsed?.models?.length || 0}\n- Palette overrides: ${res.parsed?.palette?.size || 0}${runtimeLine}\n- Warnings: ${res.warnings?.length ? res.warnings.join('; ') : 'none'}`
         };
       } else {
         return {
-          text: `✗ Cart check failed:\n${res.errors.map(e => `  - ${e}`).join('\n')}`,
+          text: `✗ Cart check failed:\n${res.errors.map(e => `  - ${e}`).join('\n')}${res.warnings?.length ? `\nWarnings:\n${res.warnings.map(w => `  - ${w}`).join('\n')}` : ''}`,
           isError: true
         };
       }
+    }
+
+    case 'tessera_render_preview': {
+      const target = args.path || '.';
+      const res = await renderCartPreview(target, {
+        frames: args.frames ?? 4,
+        keys: args.keys,
+        quality: args.quality,
+        out: args.outputPath || null,
+        screenshot: true,
+      });
+      const summary = [
+        res.ok
+          ? `✓ Rendered preview for "${res.meta?.title || target}" (${res.width}x${res.height}, ${res.frames} frames in ${res.elapsedMs} ms)`
+          : `✗ Cart runtime error while rendering "${res.meta?.title || target}" (state=${res.state})`,
+        `- State: ${res.state}`,
+        `- Frames rendered: ${res.frames} (hash: 0x${(res.frameHash >>> 0).toString(16)})`,
+      ];
+      if (res.outputPath) summary.push(`- Saved PNG: ${res.outputPath}`);
+      if (res.errorText) {
+        const cleanErr = String(res.errorText).split('\nR to restart')[0].trim();
+        summary.push(`- Lua Error:\n${cleanErr.split('\n').map((l) => `  ${l}`).join('\n')}`);
+      }
+      if (res.consoleErrors?.length) {
+        summary.push(`- Console Errors:\n${res.consoleErrors.map((e) => `  - ${e}`).join('\n')}`);
+      }
+      if (res.consoleLogs?.length) {
+        summary.push(`- Console Logs (printh):\n${res.consoleLogs.slice(-10).map((l) => `  - ${l}`).join('\n')}`);
+      }
+      return {
+        text: summary.join('\n'),
+        images: res.pngBase64 ? [{ data: res.pngBase64, mimeType: 'image/png' }] : [],
+        isError: !res.ok,
+      };
     }
 
     case 'tessera_assemble_cart': {
@@ -254,7 +526,7 @@ export async function handleToolCall(name, args = {}) {
         for (const spec of Object.values(manifest.models)) {
           if (typeof spec === 'string' && spec.endsWith('.vox')) {
             voxFiles.push(path.resolve(dir, spec));
-          } else if (spec && spec.file) {
+          } else if (spec && spec.file && String(spec.file).endsWith('.vox')) {
             voxFiles.push(path.resolve(dir, spec.file));
           }
         }
@@ -318,10 +590,10 @@ export function startMcpServer() {
         id,
         result: {
           protocolVersion: '2024-11-05',
-          capabilities: { tools: {} },
+          capabilities: { tools: {}, prompts: {} },
           serverInfo: {
             name: '@stephenwil/tessera-mcp',
-            version: '0.1.4'
+            version: getServerVersion()
           }
         }
       });
@@ -348,21 +620,58 @@ export function startMcpServer() {
       return;
     }
 
+    if (method === 'prompts/list') {
+      send({
+        jsonrpc: '2.0',
+        id,
+        result: {
+          prompts: PROMPTS
+        }
+      });
+      return;
+    }
+
+    if (method === 'prompts/get') {
+      try {
+        const promptResult = getPromptResult(params?.name, params?.arguments || {});
+        send({
+          jsonrpc: '2.0',
+          id,
+          result: promptResult
+        });
+      } catch (err) {
+        send({
+          jsonrpc: '2.0',
+          id,
+          error: {
+            code: -32602,
+            message: err.message
+          }
+        });
+      }
+      return;
+    }
+
     if (method === 'tools/call') {
       const toolName = params?.name;
       const toolArgs = params?.arguments || {};
       try {
         const result = await handleToolCall(toolName, toolArgs);
+        const content = [{ type: 'text', text: result.text }];
+        if (Array.isArray(result.images)) {
+          for (const img of result.images) {
+            content.push({
+              type: 'image',
+              data: img.data,
+              mimeType: img.mimeType || 'image/png',
+            });
+          }
+        }
         send({
           jsonrpc: '2.0',
           id,
           result: {
-            content: [
-              {
-                type: 'text',
-                text: result.text
-              }
-            ],
+            content,
             isError: !!result.isError
           }
         });
